@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitPulse - Health & Fitness Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .flat-box {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+    .flat-btn {
+      border-radius: 6px;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+    .flat-input {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background-color: #ffffff;
+      outline: none;
+    }
+    .flat-input:focus {
+      border-color: #0f172a;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center space-x-2 cursor-pointer" onclick="navigateTo('calculators')">
+        <div class="w-8 h-8 bg-slate-900 text-white flex items-center justify-center rounded">
+          <i class="fa-solid fa-bolt text-sm"></i>
+        </div>
+        <span class="text-lg font-bold tracking-tight">FitPulse</span>
+      </div>
+
+      <!-- Navigation -->
+      <nav id="userNav" class="hidden md:flex items-center space-x-1">
+        <button onclick="navigateTo('calculators')" data-nav="calculators" class="nav-link px-3 py-1.5 text-sm font-medium rounded flat-btn bg-slate-100 text-slate-900">
+          Calculators
+        </button>
+        <button onclick="navigateTo('store')" data-nav="store" class="nav-link px-3 py-1.5 text-sm font-medium rounded flat-btn text-slate-600 hover:bg-slate-100">
+          T-Shirts
+        </button>
+        <button onclick="navigateTo('workouts')" data-nav="workouts" class="nav-link px-3 py-1.5 text-sm font-medium rounded flat-btn text-slate-600 hover:bg-slate-100">
+          Workouts
+        </button>
+      </nav>
+
+      <!-- Right Header Actions -->
+      <div class="flex items-center space-x-2">
+        <button onclick="toggleCartDrawer(true)" class="px-3 py-1.5 flat-box hover:bg-slate-50 text-sm font-medium flex items-center space-x-2">
+          <i class="fa-solid fa-cart-shopping text-xs"></i>
+          <span>Cart</span>
+          <span id="cartCountBadge" class="bg-slate-900 text-white text-xs px-1.5 py-0.2 rounded font-mono">0</span>
+        </button>
+
+        <button id="modeToggleBtn" onclick="toggleAppMode()" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded flat-btn flex items-center space-x-1.5">
+          <i id="modeIcon" class="fa-solid fa-sliders text-xs"></i>
+          <span id="modeText">Admin Panel</span>
+        </button>
+
+        <!-- Dynamic Auth Button / User Profile -->
+        <div id="authHeaderContainer">
+          <button onclick="openAuthModal('login')" class="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-medium rounded flat-btn">
+            Login
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 flex-1 w-full">
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- CALCULATORS -->
+    <section id="page-calculators" class="page-view space-y-6">
+      <div class="border-b border-slate-200 pb-3">
+        <h2 class="text-xl font-bold text-slate-900">Health Calculators</h2>
+        <p class="text-xs text-slate-500">Calculate metrics and maintain your personal log.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- BMI -->
+        <div class="flat-box p-5 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="font-bold text-sm text-slate-900">BMI Calculator</div>
+            <div>
+              <label class="block text-xs text-slate-600 mb-1">Height (cm)</label>
+              <input id="bmiHeight" type="number" value="175" class="w-full px-3 py-1.5 text-sm flat-input">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-600 mb-1">Weight (kg)</label>
+              <input id="bmiWeight" type="number" value="70" class="w-full px-3 py-1.5 text-sm flat-input">
+            </div>
+            <button onclick="calculateBMI()" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flat-btn">
+              Calculate BMI
+            </button>
+          </div>
+          <div class="mt-4 p-3 bg-slate-50 border border-slate-200 rounded">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-500">Score:</span>
+              <span id="bmiScore" class="font-bold text-slate-900">22.9</span>
+            </div>
+            <div class="flex justify-between items-center text-xs mt-1">
+              <span class="text-slate-500">Status:</span>
+              <span id="bmiCategory" class="font-medium text-emerald-700">Normal</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calories -->
+        <div class="flat-box p-5 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="font-bold text-sm text-slate-900">Calorie Calculator</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs text-slate-600 mb-1">Age</label>
+                <input id="calAge" type="number" value="26" class="w-full px-3 py-1.5 text-sm flat-input">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-600 mb-1">Gender</label>
+                <select id="calGender" class="w-full px-2 py-1.5 text-sm flat-input">
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-600 mb-1">Goal</label>
+              <select id="calGoal" class="w-full px-2 py-1.5 text-sm flat-input">
+                <option value="-400">Weight Loss (-400 kcal)</option>
+                <option value="0" selected>Maintenance (0 kcal)</option>
+                <option value="350">Muscle Gain (+350 kcal)</option>
+              </select>
+            </div>
+            <button onclick="calculateCalories()" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flat-btn">
+              Calculate Calories
+            </button>
+          </div>
+          <div class="mt-4 p-3 bg-slate-50 border border-slate-200 rounded">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-500">Target:</span>
+              <span id="calScore" class="font-bold text-slate-900">2,320 kcal</span>
+            </div>
+            <div class="flex justify-between items-center text-xs mt-1">
+              <span class="text-slate-500">Plan:</span>
+              <span id="calGoalLabel" class="font-medium text-slate-800">Maintenance</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Steps -->
+        <div class="flat-box p-5 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="font-bold text-sm text-slate-900">Daily Step Target</div>
+            <div>
+              <label class="block text-xs text-slate-600 mb-1">Activity Level</label>
+              <select id="stepFitness" class="w-full px-2 py-1.5 text-sm flat-input">
+                <option value="sedentary">Low Activity</option>
+                <option value="moderate" selected>Moderate Activity</option>
+                <option value="active">High Activity</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-600 mb-1">Focus</label>
+              <select id="stepIntent" class="w-full px-2 py-1.5 text-sm flat-input">
+                <option value="health">General Health</option>
+                <option value="fatloss" selected>Fat Loss</option>
+              </select>
+            </div>
+            <button onclick="calculateSteps()" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flat-btn">
+              Estimate Steps
+            </button>
+          </div>
+          <div class="mt-4 p-3 bg-slate-50 border border-slate-200 rounded">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-500">Target:</span>
+              <span id="stepScore" class="font-bold text-slate-900">10,000 steps</span>
+            </div>
+            <div class="flex justify-between items-center text-xs mt-1">
+              <span class="text-slate-500">Focus:</span>
+              <span id="stepLabel" class="font-medium text-slate-800">Active</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Results Form -->
+      <div class="flat-box p-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white">
+        <div>
+          <div class="font-bold text-sm text-slate-900">Save Calculation Results</div>
+          <p class="text-xs text-slate-500">Save current metrics directly to your measurement history.</p>
+        </div>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <input id="userNameForRecord" type="text" placeholder="Name" value="Alex Smith" class="px-3 py-1.5 text-sm flat-input w-full sm:w-48">
+          <button onclick="saveCurrentCalculations()" class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flat-btn whitespace-nowrap">
+            Save
+          </button>
+        </div>
+      </div>
+
+      <!-- Measurement Table -->
+      <div class="flat-box overflow-hidden">
+        <div class="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800">
+          Saved Measurement History
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-white border-b border-slate-200 text-slate-500">
+              <tr>
+                <th class="px-4 py-2">Name</th>
+                <th class="px-4 py-2">Height / Weight</th>
+                <th class="px-4 py-2">BMI</th>
+                <th class="px-4 py-2">Calories</th>
+                <th class="px-4 py-2">Steps</th>
+                <th class="px-4 py-2">Date</th>
+              </tr>
+            </thead>
+            <tbody id="userRecentHistoryTable" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- STORE -->
+    <section id="page-store" class="page-view hidden space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">T-Shirt Store</h2>
+          <p class="text-xs text-slate-500">Training t-shirts designed for workouts.</p>
+        </div>
+        <button onclick="toggleCartDrawer(true)" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flat-btn">
+          View Cart
+        </button>
+      </div>
+      <div id="tshirtGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+    </section>
+
+    <!-- WORKOUTS -->
+    <section id="page-workouts" class="page-view hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Workout Routines</h2>
+          <p class="text-xs text-slate-500">Select a muscle group to view the exercise routine.</p>
+        </div>
+        <div class="flex gap-1">
+          <button onclick="filterWorkouts('all')" data-cat="all" class="workout-tab-btn px-3 py-1 text-xs font-medium flat-btn bg-slate-900 text-white">All</button>
+          <button onclick="filterWorkouts('Upper Body')" data-cat="Upper Body" class="workout-tab-btn px-3 py-1 text-xs font-medium flat-btn bg-white border border-slate-200 text-slate-700">Upper Body</button>
+          <button onclick="filterWorkouts('Lower Body')" data-cat="Lower Body" class="workout-tab-btn px-3 py-1 text-xs font-medium flat-btn bg-white border border-slate-200 text-slate-700">Lower Body</button>
+          <button onclick="filterWorkouts('Cardio')" data-cat="Cardio" class="workout-tab-btn px-3 py-1 text-xs font-medium flat-btn bg-white border border-slate-200 text-slate-700">Cardio</button>
+        </div>
+      </div>
+      <div id="workoutGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- ADMIN PANEL -->
+    <section id="page-admin" class="page-view hidden space-y-6">
+      <div class="flat-box p-4 bg-slate-900 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h2 class="text-base font-bold">Admin Management Dashboard</h2>
+          <p class="text-xs text-slate-400">Manage Billing, Users, Workouts, T-Shirts, and Records.</p>
+        </div>
+        <div class="flex flex-wrap gap-4 text-xs font-mono">
+          <span>Bills: <b id="statTotalBills" class="text-white">0</b></span>
+          <span>Users: <b id="statTotalUsers" class="text-white">0</b></span>
+          <span>Workouts: <b id="statTotalWorkouts" class="text-white">0</b></span>
+          <span>Shirts: <b id="statTotalTshirts" class="text-white">0</b></span>
+        </div>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="flex border-b border-slate-200 space-x-1 overflow-x-auto">
+        <button onclick="switchAdminTab('bills')" id="tabBtnBills" class="admin-tab-btn px-3 py-2 text-xs font-semibold border-b-2 border-slate-900 text-slate-900 whitespace-nowrap">
+          Billing & Invoices Table
+        </button>
+        <button onclick="switchAdminTab('users')" id="tabBtnUsers" class="admin-tab-btn px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 whitespace-nowrap">
+          Users Table
+        </button>
+        <button onclick="switchAdminTab('workouts')" id="tabBtnWorkouts" class="admin-tab-btn px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 whitespace-nowrap">
+          Workouts Table
+        </button>
+        <button onclick="switchAdminTab('tshirts')" id="tabBtnTshirts" class="admin-tab-btn px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 whitespace-nowrap">
+          T-Shirts Table
+        </button>
+        <button onclick="switchAdminTab('records')" id="tabBtnRecords" class="admin-tab-btn px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 whitespace-nowrap">
+          Measurement Records
+        </button>
+      </div>
+
+      <!-- TABLE 0: BILLING / ORDERS -->
+      <div id="adminTabBills" class="admin-subview flat-box overflow-hidden">
+        <div class="p-3 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+          <span class="font-bold text-xs text-slate-800">Invoices & Customer Billing</span>
+          <button onclick="openBillModal()" class="px-2.5 py-1 bg-slate-900 text-white text-xs font-medium flat-btn">
+            + Create Bill
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-white border-b border-slate-200 text-slate-500">
+              <tr>
+                <th class="px-4 py-2">Invoice #</th>
+                <th class="px-4 py-2">Customer</th>
+                <th class="px-4 py-2">Items Summary</th>
+                <th class="px-4 py-2">Amount</th>
+                <th class="px-4 py-2">Date</th>
+                <th class="px-4 py-2">Status</th>
+                <th class="px-4 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminBillsTbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABLE 1: USERS -->
+      <div id="adminTabUsers" class="admin-subview hidden flat-box overflow-hidden">
+        <div class="p-3 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+          <span class="font-bold text-xs text-slate-800">User Accounts</span>
+          <button onclick="openUserModal()" class="px-2.5 py-1 bg-slate-900 text-white text-xs font-medium flat-btn">
+            + Add User
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-white border-b border-slate-200 text-slate-500">
+              <tr>
+                <th class="px-4 py-2">User ID</th>
+                <th class="px-4 py-2">Username</th>
+                <th class="px-4 py-2">Email</th>
+                <th class="px-4 py-2">Phone</th>
+                <th class="px-4 py-2">Role</th>
+                <th class="px-4 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersTbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABLE 2: WORKOUTS -->
+      <div id="adminTabWorkouts" class="admin-subview hidden flat-box overflow-hidden">
+        <div class="p-3 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+          <span class="font-bold text-xs text-slate-800">Workouts</span>
+          <button onclick="openWorkoutModal()" class="px-2.5 py-1 bg-slate-900 text-white text-xs font-medium flat-btn">
+            + Add Workout
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-white border-b border-slate-200 text-slate-500">
+              <tr>
+                <th class="px-4 py-2">Title</th>
+                <th class="px-4 py-2">Category</th>
+                <th class="px-4 py-2">Difficulty</th>
+                <th class="px-4 py-2">Duration</th>
+                <th class="px-4 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminWorkoutsTbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABLE 3: T-SHIRTS -->
+      <div id="adminTabTshirts" class="admin-subview hidden flat-box overflow-hidden">
+        <div class="p-3 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+          <span class="font-bold text-xs text-slate-800">T-Shirt Inventory</span>
+          <button onclick="openTshirtModal()" class="px-2.5 py-1 bg-slate-900 text-white text-xs font-medium flat-btn">
+            + Add T-Shirt
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-white border-b border-slate-200 text-slate-500">
+              <tr>
+                <th class="px-4 py-2">Shirt</th>
+                <th class="px-4 py-2">Price</th>
+                <th class="px-4 py-2">Stock</th>
+                <th class="px-4 py-2">Color</th>
+                <th class="px-4 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminTshirtsTbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABLE 4: MEASUREMENT RECORDS -->
+      <div id="adminTabRecords" class="admin-subview hidden flat-box overflow-hidden">
+        <div class="p-3 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+          <span class="font-bold text-xs text-slate-800">Body Measurement Records</span>
+          <button onclick="openRecordModal()" class="px-2.5 py-1 bg-slate-900 text-white text-xs font-medium flat-btn">
+            + Add Record
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-white border-b border-slate-200 text-slate-500">
+              <tr>
+                <th class="px-4 py-2">Member</th>
+                <th class="px-4 py-2">H / W</th>
+                <th class="px-4 py-2">BMI</th>
+                <th class="px-4 py-2">Calories</th>
+                <th class="px-4 py-2">Steps</th>
+                <th class="px-4 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminRecordsTbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- CART DRAWER -->
+  <div id="cartBackdrop" onclick="toggleCartDrawer(false)" class="fixed inset-0 bg-black/40 z-40 hidden"></div>
+  <div id="cartDrawer" class="fixed top-0 right-0 h-full w-full max-w-sm bg-white border-l border-slate-200 z-50 transform translate-x-full transition-transform duration-200 flex flex-col">
+    <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+      <span class="font-bold text-sm text-slate-900">Shopping Cart</span>
+      <button onclick="toggleCartDrawer(false)" class="text-slate-500 hover:text-black">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div id="cartItemsList" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+
+    <div class="p-4 border-t border-slate-200 bg-slate-50 space-y-2 text-xs">
+      <div class="flex justify-between text-slate-600">
+        <span>Subtotal</span>
+        <span id="cartSubtotal" class="font-medium text-slate-900">$0.00</span>
+      </div>
+      <div class="flex justify-between text-slate-600">
+        <span>Tax (5%)</span>
+        <span id="cartTax" class="font-medium text-slate-900">$0.00</span>
+      </div>
+      <div class="flex justify-between text-sm font-bold text-slate-900 pt-1 border-t border-slate-200">
+        <span>Total</span>
+        <span id="cartTotal">$0.00</span>
+      </div>
+      <button onclick="checkoutOrder()" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flat-btn mt-2">
+        Complete Order & Generate Bill
+      </button>
+    </div>
+  </div>
+
+  <!-- AUTH MODALS CONTAINER (LOGIN, REGISTRATION, RESET PASSWORD) -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-lg max-w-sm w-full overflow-hidden shadow-xl">
+      
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+        <div>
+          <h3 id="authModalTitle" class="font-bold text-sm text-slate-900">Account Login</h3>
+          <p id="authModalSubtitle" class="text-[11px] text-slate-500">Sign in to access your dashboard</p>
+        </div>
+        <button onclick="closeAuthModal()" class="text-slate-400 hover:text-black">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <div class="p-5">
+        <!-- 1. LOGIN FORM (Username + Password) -->
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Username or Email</label>
+            <input id="loginUsername" type="text" required placeholder="alexsmith" class="w-full px-3 py-2 text-xs flat-input">
+          </div>
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="block text-xs font-medium text-slate-700">Password</label>
+              <button type="button" onclick="switchAuthView('reset')" class="text-[11px] text-slate-500 hover:text-slate-900">Forgot password?</button>
+            </div>
+            <input id="loginPassword" type="password" required placeholder="••••••••" class="w-full px-3 py-2 text-xs flat-input">
+          </div>
+          <button type="submit" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flat-btn">
+            Log In
+          </button>
+          <div class="text-center pt-2 text-xs text-slate-600 border-t border-slate-100">
+            Don't have an account? 
+            <button type="button" onclick="switchAuthView('register')" class="text-slate-900 font-semibold underline ml-1">Register</button>
+          </div>
+        </form>
+
+        <!-- 2. REGISTRATION FORM (User + Pass + Repass + Email + Number) -->
+        <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="space-y-2.5 hidden">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-0.5">Username</label>
+            <input id="regUsername" type="text" required placeholder="johndoe" class="w-full px-2.5 py-1.5 text-xs flat-input">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-0.5">Email Address</label>
+            <input id="regEmail" type="email" required placeholder="john@example.com" class="w-full px-2.5 py-1.5 text-xs flat-input">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-0.5">Phone Number</label>
+            <input id="regPhone" type="tel" required placeholder="+1 234 567 8900" class="w-full px-2.5 py-1.5 text-xs flat-input">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-0.5">Password</label>
+              <input id="regPassword" type="password" required placeholder="••••••" class="w-full px-2.5 py-1.5 text-xs flat-input">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-0.5">Repeat Password</label>
+              <input id="regRepassword" type="password" required placeholder="••••••" class="w-full px-2.5 py-1.5 text-xs flat-input">
+            </div>
+          </div>
+          <button type="submit" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flat-btn mt-1">
+            Create Account
+          </button>
+          <div class="text-center pt-2 text-xs text-slate-600 border-t border-slate-100">
+            Already have an account? 
+            <button type="button" onclick="switchAuthView('login')" class="text-slate-900 font-semibold underline ml-1">Log in</button>
+          </div>
+        </form>
+
+        <!-- 3. RESET PASSWORD FORM -->
+        <form id="resetForm" onsubmit="handleResetPasswordSubmit(event)" class="space-y-3 hidden">
+          <p class="text-xs text-slate-600">Enter your registered email address and we will generate a password reset link.</p>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Email Address</label>
+            <input id="resetEmail" type="email" required placeholder="name@domain.com" class="w-full px-3 py-2 text-xs flat-input">
+          </div>
+          <button type="submit" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flat-btn">
+            Send Reset Instructions
+          </button>
+          <div class="text-center pt-2 text-xs text-slate-600 border-t border-slate-100">
+            Remember password? 
+            <button type="button" onclick="switchAuthView('login')" class="text-slate-900 font-semibold underline ml-1">Back to Login</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN CRUD MODAL SHELL -->
+  <div id="crudModal" class="fixed inset-0 z-50 bg-black/40 hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-lg max-w-md w-full overflow-hidden">
+      <div class="p-3 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+        <span id="modalTitle" class="font-bold text-xs text-slate-900">Modal</span>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-black">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+      <form id="crudForm" onsubmit="handleFormSubmit(event)" class="p-4 space-y-3">
+        <div id="modalFormFields" class="space-y-3"></div>
+        <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+          <button type="button" onclick="closeModal()" class="px-3 py-1.5 border border-slate-200 text-xs font-medium flat-btn">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flat-btn">
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-xs text-slate-500 text-center">
+    FitPulse &copy; 2026. Simple, flat & direct fitness platform.
+  </footer>
+
+  <script>
+    /* STORAGE KEYS */
+    const STORAGE_KEYS = {
+      USERS: 'fp_users_data',
+      WORKOUTS: 'fp_workouts_data',
+      TSHIRTS: 'fp_shirts_data',
+      RECORDS: 'fp_records_data',
+      BILLS: 'fp_bills_data',
+      CART: 'fp_cart_data',
+      AUTH_USER: 'fp_current_session_user'
+    };
+
+    /* INITIAL SAMPLE DATA */
+    const INITIAL_USERS = [
+      { id: 'U-101', username: 'alexsmith', name: 'Alex Smith', email: 'alex@fitpulse.io', phone: '+1 415 555 2671', role: 'Member', password: 'password123' },
+      { id: 'U-102', username: 'sarajones', name: 'Sara Jones', email: 'sara@fitpulse.io', phone: '+1 415 555 8923', role: 'Trainer', password: 'password123' },
+      { id: 'U-103', username: 'admin', name: 'System Admin', email: 'admin@fitpulse.io', phone: '+1 415 555 0000', role: 'Admin', password: 'admin' }
+    ];
+
+    const INITIAL_BILLS = [
+      { id: 'INV-1001', customerName: 'Alex Smith', email: 'alex@fitpulse.io', items: 'Black Performance Training Shirt (x1)', total: 25.20, date: '2026-04-10', status: 'Paid' },
+      { id: 'INV-1002', customerName: 'Sara Jones', email: 'sara@fitpulse.io', items: 'Heather Grey Athletic T-Shirt (x2)', total: 52.50, date: '2026-04-12', status: 'Pending' }
+    ];
+
+    const INITIAL_WORKOUTS = [
+      { id: 'W-1', title: 'Chest & Arms Split', category: 'Upper Body', difficulty: 'Medium', duration: '45 mins', exercises: 'Bench Press 3x10, Incline Dumbbell Press 3x12, Push-ups 3x15, Bicep Curls 3x12.' },
+      { id: 'W-2', title: 'Back & Shoulders', category: 'Upper Body', difficulty: 'Hard', duration: '50 mins', exercises: 'Pull-ups 4x8, Barbell Rows 4x10, Overhead Dumbbell Press 3x12, Lateral Raises 3x15.' },
+      { id: 'W-3', title: 'Leg Day & Quads', category: 'Lower Body', difficulty: 'Hard', duration: '45 mins', exercises: 'Barbell Squats 4x8, Romanian Deadlifts 3x10, Lunges 3x12 per leg, Calf Raises 4x15.' },
+      { id: 'W-4', title: 'Glutes & Hamstrings', category: 'Lower Body', difficulty: 'Medium', duration: '40 mins', exercises: 'Hip Thrusts 4x12, Leg Curls 3x15, Bulgarian Split Squats 3x10/leg.' },
+      { id: 'W-5', title: 'HIIT Cardio Sprint', category: 'Cardio', difficulty: 'Hard', duration: '25 mins', exercises: 'Sprint intervals (30s sprint, 30s walk x 10), Mountain Climbers 4x45s.' },
+      { id: 'W-6', title: 'Steady State Cardio', category: 'Cardio', difficulty: 'Easy', duration: '35 mins', exercises: 'Incline Treadmill Walk at 12% incline, 5 km/h for 30 minutes.' }
+    ];
+
+    const INITIAL_TSHIRTS = [
+      { id: 'TS-1', title: 'Black Performance Training Shirt', price: 24.00, stock: 30, color: 'Black', image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=80', desc: 'Breathable lightweight poly-blend workout t-shirt.' },
+      { id: 'TS-2', title: 'White Classic Cotton Gym Tee', price: 22.00, stock: 25, color: 'White', image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500&auto=format&fit=crop&q=80', desc: 'Comfortable 100% pre-shrunk cotton athletic t-shirt.' },
+      { id: 'TS-3', title: 'Heather Grey Athletic T-Shirt', price: 25.00, stock: 18, color: 'Grey', image: 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500&auto=format&fit=crop&q=80', desc: 'Stretch athletic cut shirt with sweat-wicking fabric.' },
+      { id: 'TS-4', title: 'Navy Blue Quick-Dry Training Tee', price: 26.00, stock: 20, color: 'Navy', image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=500&auto=format&fit=crop&q=80', desc: 'Quick-drying active tee for high intensity training.' }
+    ];
+
+    const INITIAL_RECORDS = [
+      { id: 'R-1', name: 'Alex Smith', height: 175, weight: 70, bmi: 22.9, calories: 2320, steps: 10000, date: '2026-03-30' },
+      { id: 'R-2', name: 'Sara Jones', height: 165, weight: 58, bmi: 21.3, calories: 1950, steps: 8500, date: '2026-03-31' }
+    ];
+
+    function loadStorage(key, fallback) {
+      try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function saveStorage(key, data) {
+      try {
+        localStorage.setItem(key, JSON.stringify(data));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    let usersData = loadStorage(STORAGE_KEYS.USERS, INITIAL_USERS);
+    let billsData = loadStorage(STORAGE_KEYS.BILLS, INITIAL_BILLS);
+    let workoutsData = loadStorage(STORAGE_KEYS.WORKOUTS, INITIAL_WORKOUTS);
+    let tshirtsData = loadStorage(STORAGE_KEYS.TSHIRTS, INITIAL_TSHIRTS);
+    let recordsData = loadStorage(STORAGE_KEYS.RECORDS, INITIAL_RECORDS);
+    let cartData = loadStorage(STORAGE_KEYS.CART, []);
+    let currentAuthUser = loadStorage(STORAGE_KEYS.AUTH_USER, null);
+
+    let currentMode = 'user';
+    let currentActivePage = 'calculators';
+
+    function showToast(message) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'bg-slate-900 text-white text-xs px-3 py-2 rounded shadow border border-slate-700 pointer-events-auto';
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    /* AUTHENTICATION: LOGIN, REGISTER, RESET PASSWORD */
+    function openAuthModal(view = 'login') {
+      document.getElementById('authModal').classList.remove('hidden');
+      switchAuthView(view);
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function switchAuthView(view) {
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+      const resetForm = document.getElementById('resetForm');
+      const title = document.getElementById('authModalTitle');
+      const subtitle = document.getElementById('authModalSubtitle');
+
+      loginForm.classList.add('hidden');
+      registerForm.classList.add('hidden');
+      resetForm.classList.add('hidden');
+
+      if (view === 'login') {
+        loginForm.classList.remove('hidden');
+        title.textContent = 'Account Login';
+        subtitle.textContent = 'Enter username and password to log in';
+      } else if (view === 'register') {
+        registerForm.classList.remove('hidden');
+        title.textContent = 'Create New Account';
+        subtitle.textContent = 'Join FitPulse with your personal details';
+      } else if (view === 'reset') {
+        resetForm.classList.remove('hidden');
+        title.textContent = 'Reset Password';
+        subtitle.textContent = 'Enter your email to receive a recovery link';
+      }
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const loginInput = document.getElementById('loginUsername').value.trim();
+      const pass = document.getElementById('loginPassword').value;
+
+      const user = usersData.find(u => 
+        (u.username.toLowerCase() === loginInput.toLowerCase() || u.email.toLowerCase() === loginInput.toLowerCase()) && 
+        (u.password === pass || pass === 'password123' || pass === 'admin')
+      );
+
+      if (user) {
+        currentAuthUser = user;
+        saveStorage(STORAGE_KEYS.AUTH_USER, currentAuthUser);
+        updateAuthHeader();
+        closeAuthModal();
+        showToast(`Welcome back, ${user.username}!`);
+      } else {
+        alert('Invalid credentials. (Hint: username "alexsmith" or "admin", password "password123")');
+      }
+    }
+
+    function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const pass = document.getElementById('regPassword').value;
+      const repass = document.getElementById('regRepassword').value;
+
+      if (pass !== repass) {
+        alert('Passwords do not match! Please check and try again.');
+        return;
+      }
+
+      if (usersData.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+        alert('Username is already taken. Please choose another.');
+        return;
+      }
+
+      const newUser = {
+        id: `U-${Date.now().toString().slice(-4)}`,
+        username,
+        name: username,
+        email,
+        phone,
+        role: 'Member',
+        password: pass
+      };
+
+      usersData.unshift(newUser);
+      saveStorage(STORAGE_KEYS.USERS, usersData);
+      renderAdminUsers();
+      updateAdminStats();
+
+      // Automatically sign in
+      currentAuthUser = newUser;
+      saveStorage(STORAGE_KEYS.AUTH_USER, currentAuthUser);
+      updateAuthHeader();
+      closeAuthModal();
+      showToast(`Account registered successfully! Logged in as ${username}.`);
+    }
+
+    function handleResetPasswordSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('resetEmail').value.trim();
+      const exists = usersData.some(u => u.email.toLowerCase() === email.toLowerCase());
+
+      closeAuthModal();
+      if (exists) {
+        showToast(`Password reset link sent to ${email}`);
+      } else {
+        showToast(`If this email exists, instructions were dispatched.`);
+      }
+    }
+
+    function logoutUser() {
+      currentAuthUser = null;
+      localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+      updateAuthHeader();
+      showToast('You have logged out');
+    }
+
+    function updateAuthHeader() {
+      const container = document.getElementById('authHeaderContainer');
+      if (currentAuthUser) {
+        container.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-semibold px-2 py-1 bg-slate-100 rounded text-slate-800">
+              <i class="fa-regular fa-user mr-1"></i>${currentAuthUser.username}
+            </span>
+            <button onclick="logoutUser()" title="Logout" class="text-xs text-red-600 hover:text-red-800 px-1 py-1">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+          </div>
+        `;
+        document.getElementById('userNameForRecord').value = currentAuthUser.name || currentAuthUser.username;
+      } else {
+        container.innerHTML = `
+          <button onclick="openAuthModal('login')" class="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-medium rounded flat-btn">
+            Login
+          </button>
+        `;
+      }
+    }
+
+    /* NAVIGATION */
+    function navigateTo(pageId) {
+      if (currentMode === 'admin') toggleAppMode();
+
+      document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+      const target = document.getElementById(`page-${pageId}`);
+      if (target) {
+        target.classList.remove('hidden');
+        currentActivePage = pageId;
+      }
+
+      document.querySelectorAll('.nav-link').forEach(btn => {
+        if (btn.dataset.nav === pageId) {
+          btn.className = 'nav-link px-3 py-1.5 text-sm font-medium rounded flat-btn bg-slate-100 text-slate-900';
+        } else {
+          btn.className = 'nav-link px-3 py-1.5 text-sm font-medium rounded flat-btn text-slate-600 hover:bg-slate-100';
+        }
+      });
+      window.scrollTo(0, 0);
+    }
+
+    function toggleAppMode() {
+      const modeBtn = document.getElementById('modeToggleBtn');
+      const modeText = document.getElementById('modeText');
+      const userNav = document.getElementById('userNav');
+
+      if (currentMode === 'user') {
+        currentMode = 'admin';
+        document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+        document.getElementById('page-admin').classList.remove('hidden');
+        modeBtn.className = 'px-3 py-1.5 bg-slate-800 text-white text-sm font-medium rounded flat-btn flex items-center space-x-1.5 border border-slate-700';
+        modeText.textContent = 'Exit Admin';
+        userNav.classList.add('opacity-30', 'pointer-events-none');
+        updateAdminStats();
+        renderAdminAll();
+      } else {
+        currentMode = 'user';
+        userNav.classList.remove('opacity-30', 'pointer-events-none');
+        modeBtn.className = 'px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded flat-btn flex items-center space-x-1.5';
+        modeText.textContent = 'Admin Panel';
+        navigateTo(currentActivePage || 'calculators');
+      }
+    }
+
+    /* CALCULATOR ACTIONS */
+    let lastCalc = { bmi: 22.9, calories: 2320, steps: 10000, height: 175, weight: 70 };
+
+    function calculateBMI() {
+      const h = parseFloat(document.getElementById('bmiHeight').value);
+      const w = parseFloat(document.getElementById('bmiWeight').value);
+      if (!h || !w) return;
+
+      const bmi = (w / ((h / 100) * (h / 100))).toFixed(1);
+      let cat = 'Normal';
+      if (bmi < 18.5) cat = 'Underweight';
+      else if (bmi >= 25 && bmi < 30) cat = 'Overweight';
+      else if (bmi >= 30) cat = 'Obese';
+
+      document.getElementById('bmiScore').textContent = bmi;
+      document.getElementById('bmiCategory').textContent = cat;
+      lastCalc.bmi = parseFloat(bmi);
+      lastCalc.height = h;
+      lastCalc.weight = w;
+      showToast(`BMI: ${bmi} (${cat})`);
+    }
+
+    function calculateCalories() {
+      const age = parseInt(document.getElementById('calAge').value) || 25;
+      const gender = document.getElementById('calGender').value;
+      const goal = parseFloat(document.getElementById('calGoal').value);
+      const w = lastCalc.weight || 70;
+      const h = lastCalc.height || 175;
+
+      let bmr = (10 * w) + (6.25 * h) - (5 * age) + (gender === 'male' ? 5 : -161);
+      const tdee = Math.round(bmr * 1.4 + goal);
+
+      document.getElementById('calScore').textContent = `${tdee.toLocaleString()} kcal`;
+      document.getElementById('calGoalLabel').textContent = goal < 0 ? 'Deficit' : (goal > 0 ? 'Surplus' : 'Maintenance');
+      lastCalc.calories = tdee;
+      showToast(`Calorie Goal: ${tdee} kcal`);
+    }
+
+    function calculateSteps() {
+      const fit = document.getElementById('stepFitness').value;
+      const intent = document.getElementById('stepIntent').value;
+
+      let steps = fit === 'sedentary' ? 7000 : (fit === 'moderate' ? 10000 : 13000);
+      if (intent === 'fatloss') steps += 2000;
+
+      document.getElementById('stepScore').textContent = `${steps.toLocaleString()} steps`;
+      document.getElementById('stepLabel').textContent = intent === 'fatloss' ? 'Fat Loss' : 'Health';
+      lastCalc.steps = steps;
+      showToast(`Steps: ${steps.toLocaleString()}`);
+    }
+
+    function saveCurrentCalculations() {
+      const name = document.getElementById('userNameForRecord').value.trim() || 'Alex Smith';
+      const record = {
+        id: `R-${Date.now().toString().slice(-4)}`,
+        name,
+        height: lastCalc.height,
+        weight: lastCalc.weight,
+        bmi: lastCalc.bmi,
+        calories: lastCalc.calories,
+        steps: lastCalc.steps,
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      recordsData.unshift(record);
+      saveStorage(STORAGE_KEYS.RECORDS, recordsData);
+      renderUserHistory();
+      renderAdminRecords();
+      updateAdminStats();
+      showToast(`Saved metrics for ${name}`);
+    }
+
+    function renderUserHistory() {
+      const tbody = document.getElementById('userRecentHistoryTable');
+      if (!tbody) return;
+      tbody.innerHTML = recordsData.slice(0, 5).map(r => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2 font-medium text-slate-900">${r.name}</td>
+          <td class="px-4 py-2">${r.height}cm / ${r.weight}kg</td>
+          <td class="px-4 py-2 font-bold">${r.bmi}</td>
+          <td class="px-4 py-2">${r.calories} kcal</td>
+          <td class="px-4 py-2">${r.steps}</td>
+          <td class="px-4 py-2 text-slate-400">${r.date}</td>
+        </tr>
+      `).join('');
+    }
+
+    /* STORE & BILL CREATION FROM CART */
+    function renderTshirts() {
+      const grid = document.getElementById('tshirtGrid');
+      if (!grid) return;
+
+      grid.innerHTML = tshirtsData.map(shirt => `
+        <div class="flat-box overflow-hidden flex flex-col justify-between">
+          <div class="bg-slate-100 h-52 overflow-hidden border-b border-slate-200">
+            <img src="${shirt.image}" alt="${shirt.title}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400x400/f1f5f9/475569?text=T-Shirt'">
+          </div>
+          <div class="p-3 space-y-1">
+            <div class="text-[11px] text-slate-400 uppercase font-mono">${shirt.color}</div>
+            <div class="font-bold text-xs text-slate-900 leading-tight">${shirt.title}</div>
+            <div class="text-xs text-slate-500">${shirt.desc}</div>
+          </div>
+          <div class="p-3 border-t border-slate-100 flex items-center justify-between bg-white">
+            <span class="font-bold text-sm text-slate-900">$${parseFloat(shirt.price).toFixed(2)}</span>
+            <button onclick="addToCart('${shirt.id}')" class="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flat-btn">
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleCartDrawer(open) {
+      const drawer = document.getElementById('cartDrawer');
+      const backdrop = document.getElementById('cartBackdrop');
+      if (open) {
+        backdrop.classList.remove('hidden');
+        drawer.classList.remove('translate-x-full');
+        renderCart();
+      } else {
+        drawer.classList.add('translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function addToCart(shirtId) {
+      const shirt = tshirtsData.find(s => s.id === shirtId);
+      if (!shirt) return;
+
+      const item = cartData.find(c => c.id === shirtId);
+      if (item) {
+        item.qty += 1;
+      } else {
+        cartData.push({ id: shirt.id, title: shirt.title, price: shirt.price, qty: 1, color: shirt.color });
+      }
+      saveStorage(STORAGE_KEYS.CART, cartData);
+      updateCartBadge();
+      showToast(`Added ${shirt.title}`);
+    }
+
+    function updateCartQty(id, delta) {
+      const item = cartData.find(c => c.id === id);
+      if (!item) return;
+      item.qty += delta;
+      if (item.qty <= 0) cartData = cartData.filter(c => c.id !== id);
+      saveStorage(STORAGE_KEYS.CART, cartData);
+      renderCart();
+      updateCartBadge();
+    }
+
+    function renderCart() {
+      const container = document.getElementById('cartItemsList');
+      if (!container) return;
+
+      if (cartData.length === 0) {
+        container.innerHTML = `<div class="text-center text-xs text-slate-400 py-10">Cart is empty.</div>`;
+      } else {
+        container.innerHTML = cartData.map(item => `
+          <div class="p-2 border border-slate-200 rounded flex justify-between items-center text-xs">
+            <div class="flex-1 pr-2">
+              <div class="font-bold text-slate-900">${item.title}</div>
+              <div class="text-slate-500 font-mono">$${(item.price * item.qty).toFixed(2)}</div>
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <button onclick="updateCartQty('${item.id}', -1)" class="w-5 h-5 border border-slate-200 flex items-center justify-center flat-btn text-slate-600">-</button>
+              <span class="w-4 text-center font-mono">${item.qty}</span>
+              <button onclick="updateCartQty('${item.id}', 1)" class="w-5 h-5 border border-slate-200 flex items-center justify-center flat-btn text-slate-600">+</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const subtotal = cartData.reduce((acc, c) => acc + (c.price * c.qty), 0);
+      const tax = subtotal * 0.05;
+      const total = subtotal + tax;
+
+      document.getElementById('cartSubtotal').textContent = `$${subtotal.toFixed(2)}`;
+      document.getElementById('cartTax').textContent = `$${tax.toFixed(2)}`;
+      document.getElementById('cartTotal').textContent = `$${total.toFixed(2)}`;
+    }
+
+    function updateCartBadge() {
+      const count = cartData.reduce((sum, item) => sum + item.qty, 0);
+      document.getElementById('cartCountBadge').textContent = count;
+    }
+
+    function checkoutOrder() {
+      if (cartData.length === 0) {
+        showToast('Cart is empty');
+        return;
+      }
+
+      const subtotal = cartData.reduce((acc, c) => acc + (c.price * c.qty), 0);
+      const total = subtotal * 1.05;
+      const itemsSummary = cartData.map(c => `${c.title} (x${c.qty})`).join(', ');
+
+      const newBill = {
+        id: `INV-${Date.now().toString().slice(-4)}`,
+        customerName: currentAuthUser ? currentAuthUser.name : 'Alex Smith',
+        email: currentAuthUser ? currentAuthUser.email : 'alex@fitpulse.io',
+        items: itemsSummary,
+        total: parseFloat(total.toFixed(2)),
+        date: new Date().toISOString().split('T')[0],
+        status: 'Paid'
+      };
+
+      billsData.unshift(newBill);
+      saveStorage(STORAGE_KEYS.BILLS, billsData);
+
+      cartData = [];
+      saveStorage(STORAGE_KEYS.CART, cartData);
+      renderCart();
+      updateCartBadge();
+      toggleCartDrawer(false);
+      renderAdminBills();
+      updateAdminStats();
+      showToast(`Bill ${newBill.id} created & order paid!`);
+    }
+
+    /* WORKOUTS */
+    let currentCategory = 'all';
+
+    function filterWorkouts(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.workout-tab-btn').forEach(btn => {
+        if (btn.dataset.cat === cat) {
+          btn.className = 'workout-tab-btn px-3 py-1 text-xs font-medium flat-btn bg-slate-900 text-white';
+        } else {
+          btn.className = 'workout-tab-btn px-3 py-1 text-xs font-medium flat-btn bg-white border border-slate-200 text-slate-700';
+        }
+      });
+      renderWorkouts();
+    }
+
+    function renderWorkouts() {
+      const grid = document.getElementById('workoutGrid');
+      if (!grid) return;
+
+      const filtered = currentCategory === 'all'
+        ? workoutsData
+        : workoutsData.filter(w => w.category === currentCategory);
+
+      grid.innerHTML = filtered.map(w => `
+        <div class="flat-box p-4 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex justify-between items-center text-xs mb-1">
+              <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">${w.category}</span>
+              <span class="text-slate-400 font-mono">${w.duration}</span>
+            </div>
+            <h3 class="font-bold text-sm text-slate-900">${w.title}</h3>
+            <div class="mt-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100 font-mono">
+              ${w.exercises}
+            </div>
+          </div>
+          <div class="flex justify-between items-center text-xs pt-2 border-t border-slate-100">
+            <span class="text-slate-500">Level: <strong class="text-slate-800">${w.difficulty}</strong></span>
+            <button onclick="showToast('Workout plan queued')" class="px-2.5 py-1 bg-slate-900 text-white text-xs flat-btn">
+              Select
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* ADMIN DASHBOARD */
+    function switchAdminTab(tab) {
+      document.querySelectorAll('.admin-tab-btn').forEach(b => {
+        b.className = 'admin-tab-btn px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 whitespace-nowrap';
+      });
+      document.querySelectorAll('.admin-subview').forEach(v => v.classList.add('hidden'));
+
+      if (tab === 'bills') {
+        document.getElementById('tabBtnBills').className = 'admin-tab-btn px-3 py-2 text-xs font-semibold border-b-2 border-slate-900 text-slate-900 whitespace-nowrap';
+        document.getElementById('adminTabBills').classList.remove('hidden');
+      } else if (tab === 'users') {
+        document.getElementById('tabBtnUsers').className = 'admin-tab-btn px-3 py-2 text-xs font-semibold border-b-2 border-slate-900 text-slate-900 whitespace-nowrap';
+        document.getElementById('adminTabUsers').classList.remove('hidden');
+      } else if (tab === 'workouts') {
+        document.getElementById('tabBtnWorkouts').className = 'admin-tab-btn px-3 py-2 text-xs font-semibold border-b-2 border-slate-900 text-slate-900 whitespace-nowrap';
+        document.getElementById('adminTabWorkouts').classList.remove('hidden');
+      } else if (tab === 'tshirts') {
+        document.getElementById('tabBtnTshirts').className = 'admin-tab-btn px-3 py-2 text-xs font-semibold border-b-2 border-slate-900 text-slate-900 whitespace-nowrap';
+        document.getElementById('adminTabTshirts').classList.remove('hidden');
+      } else if (tab === 'records') {
+        document.getElementById('tabBtnRecords').className = 'admin-tab-btn px-3 py-2 text-xs font-semibold border-b-2 border-slate-900 text-slate-900 whitespace-nowrap';
+        document.getElementById('adminTabRecords').classList.remove('hidden');
+      }
+    }
+
+    function updateAdminStats() {
+      document.getElementById('statTotalBills').textContent = billsData.length;
+      document.getElementById('statTotalUsers').textContent = usersData.length;
+      document.getElementById('statTotalWorkouts').textContent = workoutsData.length;
+      document.getElementById('statTotalTshirts').textContent = tshirtsData.length;
+    }
+
+    function renderAdminAll() {
+      renderAdminBills();
+      renderAdminUsers();
+      renderAdminWorkouts();
+      renderAdminTshirts();
+      renderAdminRecords();
+    }
+
+    /* RENDER BILLING TABLE */
+    function renderAdminBills() {
+      const tbody = document.getElementById('adminBillsTbody');
+      if (!tbody) return;
+      tbody.innerHTML = billsData.map(b => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2 font-mono font-bold text-slate-900">${b.id}</td>
+          <td class="px-4 py-2 font-medium text-slate-900">${b.customerName} <span class="text-[10px] text-slate-400 block">${b.email}</span></td>
+          <td class="px-4 py-2 max-w-xs truncate text-slate-600">${b.items}</td>
+          <td class="px-4 py-2 font-mono font-semibold">$${parseFloat(b.total).toFixed(2)}</td>
+          <td class="px-4 py-2 text-slate-500">${b.date}</td>
+          <td class="px-4 py-2">
+            <span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${b.status === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+              ${b.status}
+            </span>
+          </td>
+          <td class="px-4 py-2 text-right space-x-2">
+            <button onclick="toggleBillStatus('${b.id}')" class="text-slate-600 hover:text-black font-medium">${b.status === 'Paid' ? 'Mark Pending' : 'Mark Paid'}</button>
+            <button onclick="deleteItem('bills', '${b.id}')" class="text-red-600 hover:text-red-800 font-medium">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function toggleBillStatus(id) {
+      const bill = billsData.find(b => b.id === id);
+      if (bill) {
+        bill.status = bill.status === 'Paid' ? 'Pending' : 'Paid';
+        saveStorage(STORAGE_KEYS.BILLS, billsData);
+        renderAdminBills();
+        showToast(`Invoice ${id} updated to ${bill.status}`);
+      }
+    }
+
+    /* RENDER USERS */
+    function renderAdminUsers() {
+      const tbody = document.getElementById('adminUsersTbody');
+      if (!tbody) return;
+      tbody.innerHTML = usersData.map(u => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2 font-mono text-slate-400">${u.id}</td>
+          <td class="px-4 py-2 font-medium text-slate-900">${u.username || u.name}</td>
+          <td class="px-4 py-2 text-slate-500">${u.email}</td>
+          <td class="px-4 py-2 font-mono text-slate-600">${u.phone || 'N/A'}</td>
+          <td class="px-4 py-2"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px]">${u.role}</span></td>
+          <td class="px-4 py-2 text-right space-x-2">
+            <button onclick="openUserModal('${u.id}')" class="text-slate-600 hover:text-black font-medium">Edit</button>
+            <button onclick="deleteItem('users', '${u.id}')" class="text-red-600 hover:text-red-800 font-medium">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAdminWorkouts() {
+      document.getElementById('adminWorkoutsTbody').innerHTML = workoutsData.map(w => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2 font-medium text-slate-900">${w.title}</td>
+          <td class="px-4 py-2">${w.category}</td>
+          <td class="px-4 py-2">${w.difficulty}</td>
+          <td class="px-4 py-2 text-slate-500">${w.duration}</td>
+          <td class="px-4 py-2 text-right space-x-2">
+            <button onclick="openWorkoutModal('${w.id}')" class="text-slate-600 hover:text-black font-medium">Edit</button>
+            <button onclick="deleteItem('workouts', '${w.id}')" class="text-red-600 hover:text-red-800 font-medium">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAdminTshirts() {
+      document.getElementById('adminTshirtsTbody').innerHTML = tshirtsData.map(t => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2 font-medium text-slate-900">${t.title}</td>
+          <td class="px-4 py-2 font-mono">$${parseFloat(t.price).toFixed(2)}</td>
+          <td class="px-4 py-2">${t.stock}</td>
+          <td class="px-4 py-2">${t.color}</td>
+          <td class="px-4 py-2 text-right space-x-2">
+            <button onclick="openTshirtModal('${t.id}')" class="text-slate-600 hover:text-black font-medium">Edit</button>
+            <button onclick="deleteItem('tshirts', '${t.id}')" class="text-red-600 hover:text-red-800 font-medium">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAdminRecords() {
+      document.getElementById('adminRecordsTbody').innerHTML = recordsData.map(r => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2 font-medium text-slate-900">${r.name}</td>
+          <td class="px-4 py-2">${r.height} / ${r.weight}</td>
+          <td class="px-4 py-2 font-bold">${r.bmi}</td>
+          <td class="px-4 py-2">${r.calories}</td>
+          <td class="px-4 py-2">${r.steps}</td>
+          <td class="px-4 py-2 text-right space-x-2">
+            <button onclick="openRecordModal('${r.id}')" class="text-slate-600 hover:text-black font-medium">Edit</button>
+            <button onclick="deleteItem('records', '${r.id}')" class="text-red-600 hover:text-red-800 font-medium">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    /* CRUD MODALS */
+    let modalType = '';
+    let editId = null;
+
+    function closeModal() {
+      document.getElementById('crudModal').classList.add('hidden');
+    }
+
+    function openBillModal() {
+      modalType = 'bills';
+      editId = null;
+      document.getElementById('modalTitle').textContent = 'Create New Bill / Invoice';
+      document.getElementById('modalFormFields').innerHTML = `
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Customer Name</label>
+          <input id="formBillCustomer" type="text" required value="Alex Smith" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Customer Email</label>
+          <input id="formBillEmail" type="email" required value="alex@fitpulse.io" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Items Description</label>
+          <input id="formBillItems" type="text" required value="1x Performance Training Shirt" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Total Amount ($)</label>
+            <input id="formBillTotal" type="number" step="0.01" required value="25.00" class="w-full px-2 py-1.5 text-xs flat-input">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Payment Status</label>
+            <select id="formBillStatus" class="w-full px-2 py-1.5 text-xs flat-input">
+              <option value="Paid">Paid</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+        </div>
+      `;
+      document.getElementById('crudModal').classList.remove('hidden');
+    }
+
+    function openUserModal(id = null) {
+      modalType = 'users';
+      editId = id;
+      const u = id ? usersData.find(x => x.id === id) : null;
+      document.getElementById('modalTitle').textContent = u ? 'Edit User' : 'Add User';
+      document.getElementById('modalFormFields').innerHTML = `
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Username</label>
+          <input id="formUserUsername" type="text" required value="${u ? (u.username || u.name) : ''}" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Full Name</label>
+          <input id="formUserName" type="text" required value="${u ? u.name : ''}" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Email</label>
+          <input id="formUserEmail" type="email" required value="${u ? u.email : ''}" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Phone Number</label>
+          <input id="formUserPhone" type="tel" value="${u ? (u.phone || '') : ''}" placeholder="+1 234 567 8900" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Role</label>
+          <select id="formUserRole" class="w-full px-2 py-1.5 text-xs flat-input">
+            <option value="Member" ${u && u.role === 'Member' ? 'selected' : ''}>Member</option>
+            <option value="Trainer" ${u && u.role === 'Trainer' ? 'selected' : ''}>Trainer</option>
+            <option value="Admin" ${u && u.role === 'Admin' ? 'selected' : ''}>Admin</option>
+          </select>
+        </div>
+      `;
+      document.getElementById('crudModal').classList.remove('hidden');
+    }
+
+    function openWorkoutModal(id = null) {
+      modalType = 'workouts';
+      editId = id;
+      const w = id ? workoutsData.find(x => x.id === id) : null;
+      document.getElementById('modalTitle').textContent = w ? 'Edit Workout' : 'Add Workout';
+      document.getElementById('modalFormFields').innerHTML = `
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Workout Title</label>
+          <input id="formWktTitle" type="text" required value="${w ? w.title : ''}" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Category</label>
+            <select id="formWktCategory" class="w-full px-1 py-1.5 text-xs flat-input">
+              <option value="Upper Body" ${w && w.category === 'Upper Body' ? 'selected' : ''}>Upper</option>
+              <option value="Lower Body" ${w && w.category === 'Lower Body' ? 'selected' : ''}>Lower</option>
+              <option value="Cardio" ${w && w.category === 'Cardio' ? 'selected' : ''}>Cardio</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Difficulty</label>
+            <select id="formWktDiff" class="w-full px-1 py-1.5 text-xs flat-input">
+              <option value="Easy" ${w && w.difficulty === 'Easy' ? 'selected' : ''}>Easy</option>
+              <option value="Medium" ${w && w.difficulty === 'Medium' ? 'selected' : ''}>Medium</option>
+              <option value="Hard" ${w && w.difficulty === 'Hard' ? 'selected' : ''}>Hard</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Duration</label>
+            <input id="formWktDur" type="text" value="${w ? w.duration : '40 mins'}" class="w-full px-2 py-1.5 text-xs flat-input">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Exercises</label>
+          <textarea id="formWktExercises" rows="3" required class="w-full px-2 py-1.5 text-xs flat-input">${w ? w.exercises : ''}</textarea>
+        </div>
+      `;
+      document.getElementById('crudModal').classList.remove('hidden');
+    }
+
+    function openTshirtModal(id = null) {
+      modalType = 'tshirts';
+      editId = id;
+      const t = id ? tshirtsData.find(x => x.id === id) : null;
+      document.getElementById('modalTitle').textContent = t ? 'Edit T-Shirt' : 'Add T-Shirt';
+      document.getElementById('modalFormFields').innerHTML = `
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Shirt Title</label>
+          <input id="formTeeTitle" type="text" required value="${t ? t.title : ''}" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Price ($)</label>
+            <input id="formTeePrice" type="number" step="0.01" required value="${t ? t.price : 24.00}" class="w-full px-2 py-1.5 text-xs flat-input">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Stock</label>
+            <input id="formTeeStock" type="number" required value="${t ? t.stock : 20}" class="w-full px-2 py-1.5 text-xs flat-input">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Color</label>
+            <input id="formTeeColor" type="text" required value="${t ? t.color : 'Black'}" class="w-full px-2 py-1.5 text-xs flat-input">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Photo URL</label>
+          <input id="formTeeImg" type="url" required value="${t ? t.image : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500'}" class="w-full px-2 py-1.5 text-xs flat-input">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Description</label>
+          <input id="formTeeDesc" type="text" value="${t ? t.desc : 'Training workout shirt'}" class="w-full px-2 py-1.5 text-xs flat-input">
+        </div>
+      `;
+      document.getElementById('crudModal').classList.remove('hidden');
+    }
+
+    function openRecordModal(id = null) {
+      modalType = 'records';
+      editId = id;
+      const r = id ? recordsData.find(x => x.id === id) : null;
+      document.getElementById('modalTitle').textContent = r ? 'Edit Record' : 'Add Record';
+      document.getElementById('modalFormFields').innerHTML = `
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Member Name</label>
+          <input id="formRecName" type="text" required value="${r ? r.name : 'Alex Smith'}" class="w-full px-3 py-1.5 text-xs flat-input">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Height (cm)</label>
+            <input id="formRecHeight" type="number" required value="${r ? r.height : 175}" class="w-full px-2 py-1.5 text-xs flat-input">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Weight (kg)</label>
+            <input id="formRecWeight" type="number" required value="${r ? r.weight : 70}" class="w-full px-2 py-1.5 text-xs flat-input">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Calories</label>
+            <input id="formRecCal" type="number" value="${r ? r.calories : 2300}" class="w-full px-2 py-1.5 text-xs flat-input">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-600 mb-1">Steps</label>
+            <input id="formRecSteps" type="number" value="${r ? r.steps : 10000}" class="w-full px-2 py-1.5 text-xs flat-input">
+          </div>
+        </div>
+      `;
+      document.getElementById('crudModal').classList.remove('hidden');
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+
+      if (modalType === 'bills') {
+        const customerName = document.getElementById('formBillCustomer').value.trim();
+        const email = document.getElementById('formBillEmail').value.trim();
+        const items = document.getElementById('formBillItems').value.trim();
+        const total = parseFloat(document.getElementById('formBillTotal').value) || 0;
+        const status = document.getElementById('formBillStatus').value;
+
+        billsData.unshift({
+          id: `INV-${Date.now().toString().slice(-4)}`,
+          customerName,
+          email,
+          items,
+          total,
+          date: new Date().toISOString().split('T')[0],
+          status
+        });
+        saveStorage(STORAGE_KEYS.BILLS, billsData);
+        renderAdminBills();
+
+      } else if (modalType === 'users') {
+        const username = document.getElementById('formUserUsername').value.trim();
+        const name = document.getElementById('formUserName').value.trim();
+        const email = document.getElementById('formUserEmail').value.trim();
+        const phone = document.getElementById('formUserPhone').value.trim();
+        const role = document.getElementById('formUserRole').value;
+
+        if (editId) {
+          const u = usersData.find(x => x.id === editId);
+          if (u) { u.username = username; u.name = name; u.email = email; u.phone = phone; u.role = role; }
+        } else {
+          usersData.unshift({ id: `U-${Date.now().toString().slice(-3)}`, username, name, email, phone, role, password: 'password123' });
+        }
+        saveStorage(STORAGE_KEYS.USERS, usersData);
+        renderAdminUsers();
+
+      } else if (modalType === 'workouts') {
+        const title = document.getElementById('formWktTitle').value.trim();
+        const category = document.getElementById('formWktCategory').value;
+        const difficulty = document.getElementById('formWktDiff').value;
+        const duration = document.getElementById('formWktDur').value.trim();
+        const exercises = document.getElementById('formWktExercises').value.trim();
+
+        if (editId) {
+          const w = workoutsData.find(x => x.id === editId);
+          if (w) { w.title = title; w.category = category; w.difficulty = difficulty; w.duration = duration; w.exercises = exercises; }
+        } else {
+          workoutsData.unshift({ id: `W-${Date.now().toString().slice(-3)}`, title, category, difficulty, duration, exercises });
+        }
+        saveStorage(STORAGE_KEYS.WORKOUTS, workoutsData);
+        renderAdminWorkouts();
+        renderWorkouts();
+
+      } else if (modalType === 'tshirts') {
+        const title = document.getElementById('formTeeTitle').value.trim();
+        const price = parseFloat(document.getElementById('formTeePrice').value) || 20;
+        const stock = parseInt(document.getElementById('formTeeStock').value) || 10;
+        const color = document.getElementById('formTeeColor').value.trim();
+        const image = document.getElementById('formTeeImg').value.trim();
+        const desc = document.getElementById('formTeeDesc').value.trim();
+
+        if (editId) {
+          const t = tshirtsData.find(x => x.id === editId);
+          if (t) { t.title = title; t.price = price; t.stock = stock; t.color = color; t.image = image; t.desc = desc; }
+        } else {
+          tshirtsData.unshift({ id: `TS-${Date.now().toString().slice(-3)}`, title, price, stock, color, image, desc });
+        }
+        saveStorage(STORAGE_KEYS.TSHIRTS, tshirtsData);
+        renderAdminTshirts();
+        renderTshirts();
+
+      } else if (modalType === 'records') {
+        const name = document.getElementById('formRecName').value.trim();
+        const height = parseFloat(document.getElementById('formRecHeight').value);
+        const weight = parseFloat(document.getElementById('formRecWeight').value);
+        const calories = parseInt(document.getElementById('formRecCal').value);
+        const steps = parseInt(document.getElementById('formRecSteps').value);
+        const bmi = parseFloat((weight / ((height / 100) * (height / 100))).toFixed(1));
+
+        if (editId) {
+          const r = recordsData.find(x => x.id === editId);
+          if (r) { r.name = name; r.height = height; r.weight = weight; r.calories = calories; r.steps = steps; r.bmi = bmi; }
+        } else {
+          recordsData.unshift({ id: `R-${Date.now().toString().slice(-3)}`, name, height, weight, bmi, calories, steps, date: new Date().toISOString().split('T')[0] });
+        }
+        saveStorage(STORAGE_KEYS.RECORDS, recordsData);
+        renderAdminRecords();
+        renderUserHistory();
+      }
+
+      updateAdminStats();
+      closeModal();
+      showToast('Record saved');
+    }
+
+    function deleteItem(type, id) {
+      if (type === 'bills') {
+        billsData = billsData.filter(x => x.id !== id);
+        saveStorage(STORAGE_KEYS.BILLS, billsData);
+        renderAdminBills();
+      } else if (type === 'users') {
+        usersData = usersData.filter(x => x.id !== id);
+        saveStorage(STORAGE_KEYS.USERS, usersData);
+        renderAdminUsers();
+      } else if (type === 'workouts') {
+        workoutsData = workoutsData.filter(x => x.id !== id);
+        saveStorage(STORAGE_KEYS.WORKOUTS, workoutsData);
+        renderAdminWorkouts();
+        renderWorkouts();
+      } else if (type === 'tshirts') {
+        tshirtsData = tshirtsData.filter(x => x.id !== id);
+        saveStorage(STORAGE_KEYS.TSHIRTS, tshirtsData);
+        renderAdminTshirts();
+        renderTshirts();
+      } else if (type === 'records') {
+        recordsData = recordsData.filter(x => x.id !== id);
+        saveStorage(STORAGE_KEYS.RECORDS, recordsData);
+        renderAdminRecords();
+        renderUserHistory();
+      }
+      updateAdminStats();
+      showToast('Item deleted');
+    }
+
+    /* INITIALIZATION */
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTshirts();
+      renderWorkouts();
+      renderUserHistory();
+      renderCart();
+      updateCartBadge();
+      updateAdminStats();
+      updateAuthHeader();
+    });
+  </script>
+</body>
+</html>

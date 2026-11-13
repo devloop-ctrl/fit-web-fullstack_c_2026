@@ -1,0 +1,13 @@
+# Environment secrets & database credentials
+.env
+.env.*
+*.env
+.env.local
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
