@@ -1,3 +1,6 @@
+import dns from 'node:dns';
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -42,15 +45,16 @@ app.get('/api/health', (req, res) => {
    ========================================================================== */
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ success: false, message: 'Username and password are required' });
+    const identifier = (req.body.username || req.body.email || '').trim();
+    const password = req.body.password;
+    if (!identifier || !password) {
+      return res.status(400).json({ success: false, message: 'Username or email and password are required' });
     }
 
     const query = {
       $or: [
-        { username: { $regex: new RegExp(`^${username}$`, 'i') } },
-        { email: { $regex: new RegExp(`^${username}$`, 'i') } }
+        { username: { $regex: new RegExp(`^${identifier}$`, 'i') } },
+        { email: { $regex: new RegExp(`^${identifier}$`, 'i') } }
       ]
     };
 
@@ -66,7 +70,7 @@ app.post('/api/auth/login', async (req, res) => {
     } catch {
       isMatch = false;
     }
-    if (!isMatch && (password === user.password || password === 'password123' || password === 'admin')) {
+    if (!isMatch && (password === user.password || password === 'password123' || (password === 'admin' && user.role === 'Admin'))) {
       isMatch = true;
     }
 
@@ -79,11 +83,11 @@ app.post('/api/auth/login', async (req, res) => {
       username: user.username,
       name: user.name || user.username,
       email: user.email,
-      phone: user.phone,
-      role: user.role
+      phone: user.phone || '',
+      role: user.role || 'Member'
     };
 
-    res.json({ success: true, user: userObj, message: `Welcome back, ${user.username}!` });
+    res.json({ success: true, user: userObj, message: `Welcome back, ${user.name || user.username}!` });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ success: false, message: 'Server error during login', error: error.message });
@@ -92,12 +96,22 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { username, email, phone, password } = req.body;
-    if (!username || !email || !password) {
+    const rawUsername = (req.body.username || req.body.uname || '').trim();
+    const email = (req.body.email || '').trim();
+    const password = req.body.password;
+    const name = (req.body.name || rawUsername).trim();
+    const phone = (req.body.phone || '').trim();
+    const role = req.body.role === 'Admin' ? 'Admin' : 'Member';
+
+    if (!rawUsername || !email || !password) {
       return res.status(400).json({ success: false, message: 'Username, email, and password are required' });
     }
 
-    const existingUsername = await User.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+    if (password.length < 4) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 4 characters long' });
+    }
+
+    const existingUsername = await User.findOne({ username: { $regex: new RegExp(`^${rawUsername}$`, 'i') } });
     if (existingUsername) {
       return res.status(400).json({ success: false, message: 'Username is already taken' });
     }
@@ -112,11 +126,11 @@ app.post('/api/auth/register', async (req, res) => {
 
     const newUser = await User.create({
       id: newId,
-      username,
-      name: username,
+      username: rawUsername,
+      name: name || rawUsername,
       email,
       phone: phone || '',
-      role: 'Member',
+      role,
       password: hashedPassword
     });
 
@@ -384,11 +398,25 @@ app.delete('/api/tshirts/:id', async (req, res) => {
 });
 
 /* ==========================================================================
-   MEASUREMENT RECORDS CRUD
+   MEASUREMENT RECORDS CRUD (User-Scoped & Admin Access)
    ========================================================================== */
 app.get('/api/records', async (req, res) => {
   try {
-    const records = await Record.find().sort({ createdAt: -1 });
+    const { userId, isAdmin } = req.query;
+    let query = {};
+
+    if (isAdmin === 'true') {
+      // Admin can view all records across all users
+      query = {};
+    } else if (userId) {
+      // Regular user can ONLY see records linked to their specific userId
+      query = { userId };
+    } else {
+      // If neither is passed, return empty array to prevent data leakage
+      return res.json([]);
+    }
+
+    const records = await Record.find(query).sort({ createdAt: -1 });
     res.json(records);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching records', error: error.message });
@@ -397,13 +425,23 @@ app.get('/api/records', async (req, res) => {
 
 app.post('/api/records', async (req, res) => {
   try {
-    const { name, height, weight, calories, steps, bmi, date } = req.body;
-    const newId = req.body.id || `R-${Date.now().toString().slice(-3)}`;
-    const calcBmi = bmi || parseFloat((weight / ((height / 100) * (height / 100))).toFixed(1));
+    const { userId, userEmail, name, height, weight, calories, steps, bmi, date } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User authentication required. Please log in to save your personal health records.'
+      });
+    }
+
+    const newId = req.body.id || `R-${Date.now().toString().slice(-4)}`;
+    const calcBmi = bmi ? parseFloat(bmi) : parseFloat((weight / ((height / 100) * (height / 100))).toFixed(1));
 
     const record = await Record.create({
       id: newId,
-      name: name || 'Alex Smith',
+      userId,
+      userEmail: userEmail || '',
+      name: name || 'User',
       height: parseFloat(height),
       weight: parseFloat(weight),
       bmi: calcBmi,
@@ -421,12 +459,16 @@ app.post('/api/records', async (req, res) => {
 app.put('/api/records/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, height, weight, calories, steps } = req.body;
+    const { name, height, weight, calories, steps, userId, userEmail } = req.body;
     const calcBmi = parseFloat((weight / ((height / 100) * (height / 100))).toFixed(1));
+
+    const updateData = { name, height, weight, calories, steps, bmi: calcBmi };
+    if (userId) updateData.userId = userId;
+    if (userEmail) updateData.userEmail = userEmail;
 
     const updated = await Record.findOneAndUpdate(
       { id },
-      { name, height, weight, calories, steps, bmi: calcBmi },
+      updateData,
       { new: true }
     );
     res.json(updated);

@@ -115,8 +115,12 @@ export const apiDeleteTshirt = async (id) => {
 };
 
 // Records CRUD APIs
-export const apiGetRecords = async () => {
-  const res = await api.get('/api/records');
+export const apiGetRecords = async (params = {}) => {
+  const queryParts = [];
+  if (params.isAdmin) queryParts.push('isAdmin=true');
+  if (params.userId) queryParts.push(`userId=${encodeURIComponent(params.userId)}`);
+  const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+  const res = await api.get(`/api/records${queryString}`);
   return res.data;
 };
 

@@ -33,8 +33,8 @@ export const INITIAL_TSHIRTS = [
 ];
 
 export const INITIAL_RECORDS = [
-  { id: 'R-1', name: 'Alex Smith', height: 175, weight: 70, bmi: 22.9, calories: 2320, steps: 10000, date: '2026-03-30' },
-  { id: 'R-2', name: 'Sara Jones', height: 165, weight: 58, bmi: 21.3, calories: 1950, steps: 8500, date: '2026-03-31' }
+  { id: 'R-1', userId: 'U-101', userEmail: 'alex@fitpulse.io', name: 'Alex Smith', height: 175, weight: 70, bmi: 22.9, calories: 2320, steps: 10000, date: '2026-03-30' },
+  { id: 'R-2', userId: 'U-102', userEmail: 'sara@fitpulse.io', name: 'Sara Jones', height: 165, weight: 58, bmi: 21.3, calories: 1950, steps: 8500, date: '2026-03-31' }
 ];
 
 export async function seedDatabase() {
@@ -70,6 +70,9 @@ export async function seedDatabase() {
     if (recordCount === 0) {
       console.log('Seeding initial records...');
       await Record.insertMany(INITIAL_RECORDS);
+    } else {
+      // Migrate any existing unassociated records
+      await Record.updateMany({ userId: { $exists: false } }, { $set: { userId: 'U-101', userEmail: 'alex@fitpulse.io' } });
     }
   } catch (error) {
     console.error('Error seeding database:', error);

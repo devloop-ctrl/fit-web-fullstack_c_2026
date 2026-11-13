@@ -38,6 +38,8 @@ const CrudModal = () => {
 
   // Record Form state
   const [recName, setRecName] = useState('Alex Smith');
+  const [recUserId, setRecUserId] = useState('U-101');
+  const [recUserEmail, setRecUserEmail] = useState('');
   const [recHeight, setRecHeight] = useState('175');
   const [recWeight, setRecWeight] = useState('70');
   const [recCal, setRecCal] = useState('2300');
@@ -105,12 +107,16 @@ const CrudModal = () => {
     } else if (type === 'records') {
       if (item) {
         setRecName(item.name || 'Alex Smith');
+        setRecUserId(item.userId || 'U-101');
+        setRecUserEmail(item.userEmail || '');
         setRecHeight(item.height ? item.height.toString() : '175');
         setRecWeight(item.weight ? item.weight.toString() : '70');
         setRecCal(item.calories ? item.calories.toString() : '2300');
         setRecSteps(item.steps ? item.steps.toString() : '10000');
       } else {
         setRecName('Alex Smith');
+        setRecUserId('U-101');
+        setRecUserEmail('alex@fitpulse.io');
         setRecHeight('175');
         setRecWeight('70');
         setRecCal('2300');
@@ -167,6 +173,8 @@ const CrudModal = () => {
       const h = parseFloat(recHeight) || 175;
       const w = parseFloat(recWeight) || 70;
       dataToSave = {
+        userId: recUserId.trim() || 'U-101',
+        userEmail: recUserEmail.trim(),
         name: recName.trim(),
         height: h,
         weight: w,
@@ -472,6 +480,29 @@ const CrudModal = () => {
             {/* RECORDS FIELDS */}
             {type === 'records' && (
               <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">User ID</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. U-101"
+                      value={recUserId}
+                      onChange={(e) => setRecUserId(e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs flat-input font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">User Email</label>
+                    <input
+                      type="email"
+                      placeholder="e.g. alex@fitpulse.io"
+                      value={recUserEmail}
+                      onChange={(e) => setRecUserEmail(e.target.value)}
+                      className="w-full px-2 py-1.5 text-xs flat-input"
+                    />
+                  </div>
+                </div>
                 <div>
                   <label className="block text-xs text-slate-600 mb-1">Member Name</label>
                   <input

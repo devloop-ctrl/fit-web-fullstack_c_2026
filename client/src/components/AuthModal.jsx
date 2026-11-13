@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { closeAuthModal, switchAuthView, addToast, fetchUsers } from '../features/FitnessSlice';
+import { useNavigate } from 'react-router-dom';
+import {
+  closeAuthModal,
+  switchAuthView,
+  addToast,
+  fetchUsers,
+  fetchRecords,
+  fetchAllFitnessData,
+  setMode,
+  setActivePage
+} from '../features/FitnessSlice';
 import { login, register } from '../features/UserSlice';
 import { apiResetPassword } from '../services/api';
 
 const AuthModal = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { authModal } = useSelector((state) => state.fitness);
   const { isLoading } = useSelector((state) => state.user);
 
@@ -20,34 +31,54 @@ const AuthModal = () => {
   const [regRepassword, setRegRepassword] = useState('');
 
   const [resetEmail, setResetEmail] = useState('');
+  const [authError, setAuthError] = useState('');
 
   if (!authModal.isOpen) return null;
 
   const handleClose = () => {
+    setAuthError('');
     dispatch(closeAuthModal());
   };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    setAuthError('');
     if (!loginInput || !loginPassword) return;
 
     try {
       const result = await dispatch(
         login({ username: loginInput.trim(), password: loginPassword })
       ).unwrap();
-      dispatch(addToast(`Welcome back, ${result.user?.username || loginInput}!`));
+
+      const authenticatedUser = result.user;
       dispatch(closeAuthModal());
       setLoginInput('');
       setLoginPassword('');
+
+      // Automatic Role-Based Routing
+      if (authenticatedUser?.role === 'Admin') {
+        dispatch(setMode('admin'));
+        dispatch(fetchAllFitnessData({ role: 'Admin', id: authenticatedUser.id }));
+        dispatch(addToast(`Welcome Administrator, ${authenticatedUser.name || authenticatedUser.username}!`));
+        navigate('/admin');
+      } else {
+        dispatch(setMode('user'));
+        dispatch(setActivePage('calculators'));
+        dispatch(fetchRecords({ userId: authenticatedUser.id }));
+        dispatch(addToast(`Welcome back, ${authenticatedUser.name || authenticatedUser.username}!`));
+        navigate('/calculators');
+      }
     } catch (err) {
-      alert(err || 'Invalid credentials. (Hint: username "alexsmith" or "admin", password "password123")');
+      setAuthError(typeof err === 'string' ? err : 'Invalid credentials. Please verify your login details.');
     }
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+    setAuthError('');
+
     if (regPassword !== regRepassword) {
-      alert('Passwords do not match! Please check and try again.');
+      setAuthError('Passwords do not match. Please verify your password entry.');
       return;
     }
 
@@ -61,20 +92,23 @@ const AuthModal = () => {
         })
       ).unwrap();
 
+      const registeredUser = result.user;
       dispatch(fetchUsers());
-      dispatch(
-        addToast(
-          `Account registered successfully! Logged in as ${result.user?.username || regUsername}.`
-        )
-      );
       dispatch(closeAuthModal());
       setRegUsername('');
       setRegEmail('');
       setRegPhone('');
       setRegPassword('');
       setRegRepassword('');
+
+      // Auto-redirect to personal calculators
+      dispatch(setMode('user'));
+      dispatch(setActivePage('calculators'));
+      dispatch(fetchRecords({ userId: registeredUser.id }));
+      dispatch(addToast(`Account registered successfully! Welcome, ${registeredUser.name || registeredUser.username}.`));
+      navigate('/calculators');
     } catch (err) {
-      alert(err || 'Registration failed');
+      setAuthError(typeof err === 'string' ? err : 'Registration failed. Username or email may already be registered.');
     }
   };
 
@@ -122,6 +156,13 @@ const AuthModal = () => {
         </div>
 
         <div className="p-5">
+          {authError && (
+            <div className="mb-4 p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded flex items-center space-x-2">
+              <i className="fa-solid fa-circle-exclamation text-red-500"></i>
+              <span>{authError}</span>
+            </div>
+          )}
+
           {/* 1. LOGIN FORM */}
           {authModal.view === 'login' && (
             <form id="loginForm" onSubmit={handleLoginSubmit} className="space-y-3">

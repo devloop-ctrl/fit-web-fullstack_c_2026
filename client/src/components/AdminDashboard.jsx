@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   setAdminTab,
   openCrudModal,
   toggleInvoiceStatus,
   deleteFitnessItem,
+  fetchRecords,
+  fetchBills,
+  fetchUsers,
   addToast
 } from '../features/FitnessSlice';
 
@@ -13,6 +16,12 @@ const AdminDashboard = () => {
   const { adminTab, bills, users, workouts, tshirts, records } = useSelector(
     (state) => state.fitness
   );
+
+  useEffect(() => {
+    dispatch(fetchRecords({ isAdmin: true }));
+    dispatch(fetchBills());
+    dispatch(fetchUsers());
+  }, [dispatch]);
 
   const tabs = [
     { key: 'bills', label: 'Billing & Invoices Table' },
@@ -386,12 +395,17 @@ const AdminDashboard = () => {
                 ) : (
                   records.map((r) => (
                     <tr key={r.id || r._id} className="hover:bg-slate-50">
-                      <td className="px-4 py-2 font-medium text-slate-900">{r.name}</td>
+                      <td className="px-4 py-2 font-medium text-slate-900">
+                        {r.name}
+                        <span className="block text-[10px] text-slate-400 font-mono">
+                          ID: {r.userId || 'N/A'} {r.userEmail ? `• ${r.userEmail}` : ''}
+                        </span>
+                      </td>
                       <td className="px-4 py-2">
-                        {r.height} / {r.weight}
+                        {r.height}cm / {r.weight}kg
                       </td>
                       <td className="px-4 py-2 font-bold">{r.bmi}</td>
-                      <td className="px-4 py-2">{r.calories}</td>
+                      <td className="px-4 py-2">{r.calories} kcal</td>
                       <td className="px-4 py-2">{r.steps}</td>
                       <td className="px-4 py-2 text-right space-x-2 whitespace-nowrap">
                         <button

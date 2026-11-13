@@ -8,13 +8,16 @@ import {
 } from '../services/api';
 
 // Async thunks for fetching data
-export const fetchAllFitnessData = createAsyncThunk('fitness/fetchAll', async () => {
+export const fetchAllFitnessData = createAsyncThunk('fitness/fetchAll', async (authContext = {}) => {
+  const isAdmin = authContext?.role === 'Admin';
+  const userId = authContext?.id;
+
   const [users, bills, workouts, tshirts, records] = await Promise.all([
-    apiGetUsers().catch(() => []),
-    apiGetBills().catch(() => []),
+    isAdmin ? apiGetUsers().catch(() => []) : Promise.resolve([]),
+    isAdmin ? apiGetBills().catch(() => []) : Promise.resolve([]),
     apiGetWorkouts().catch(() => []),
     apiGetTshirts().catch(() => []),
-    apiGetRecords().catch(() => [])
+    apiGetRecords({ userId, isAdmin }).catch(() => [])
   ]);
   return { users, bills, workouts, tshirts, records };
 });
@@ -27,8 +30,8 @@ export const fetchTshirts = createAsyncThunk('fitness/fetchTshirts', async () =>
   return await apiGetTshirts();
 });
 
-export const fetchRecords = createAsyncThunk('fitness/fetchRecords', async () => {
-  return await apiGetRecords();
+export const fetchRecords = createAsyncThunk('fitness/fetchRecords', async (params = {}) => {
+  return await apiGetRecords(params);
 });
 
 export const fetchBills = createAsyncThunk('fitness/fetchBills', async () => {
@@ -115,11 +118,22 @@ export const FitnessSlice = createSlice({
         state.mode = 'user';
       }
     },
-    toggleMode: (state) => {
+    toggleMode: (state, action) => {
+      const role = action.payload?.role;
+      if (role !== 'Admin') {
+        state.mode = 'user';
+        return;
+      }
       state.mode = state.mode === 'user' ? 'admin' : 'user';
     },
     setMode: (state, action) => {
       state.mode = action.payload;
+    },
+    clearUserRecords: (state) => {
+      state.records = [];
+      state.mode = 'user';
+      state.users = [];
+      state.bills = [];
     },
     setAdminTab: (state, action) => {
       state.adminTab = action.payload;
@@ -246,6 +260,7 @@ export const {
   setActivePage,
   toggleMode,
   setMode,
+  clearUserRecords,
   setAdminTab,
   setWorkoutCategory,
   openAuthModal,

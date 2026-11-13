@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toggleCartDrawer, updateCartQty, clearCart } from '../features/CartSlice';
-import { addToast, fetchBills } from '../features/FitnessSlice';
+import { addToast, fetchBills, openAuthModal } from '../features/FitnessSlice';
 import { apiCreateBill } from '../services/api';
 
 const CartDrawer = () => {
@@ -19,14 +19,20 @@ const CartDrawer = () => {
 
   const handleCheckout = async () => {
     if (items.length === 0) {
-      dispatch(addToast('Cart is empty'));
+      dispatch(addToast('Your cart is empty'));
+      return;
+    }
+
+    if (!user) {
+      dispatch(addToast('Please sign in or register to complete checkout'));
+      dispatch(openAuthModal('login'));
       return;
     }
 
     const itemsSummary = items.map((c) => `${c.title} (x${c.qty})`).join(', ');
     const newBill = {
-      customerName: user ? (user.name || user.username) : 'Alex Smith',
-      email: user ? user.email : 'alex@fitpulse.io',
+      customerName: user.name || user.username,
+      email: user.email || '',
       items: itemsSummary,
       total: parseFloat(total.toFixed(2)),
       date: new Date().toISOString().split('T')[0],

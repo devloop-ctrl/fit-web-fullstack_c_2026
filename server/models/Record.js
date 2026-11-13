@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 
 const RecordSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  userId: { type: String, required: true, index: true },
+  userEmail: { type: String, default: '' },
   name: { type: String, required: true },
   height: { type: Number, required: true },
   weight: { type: Number, required: true },
