@@ -1,0 +1,1 @@
+# fitpulse-app-fullstack_course_2026
