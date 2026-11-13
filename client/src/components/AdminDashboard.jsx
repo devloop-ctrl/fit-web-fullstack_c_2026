@@ -41,6 +41,10 @@ const AdminDashboard = () => {
   };
 
   const handleDelete = async (type, id) => {
+    if (type === 'bills') {
+      dispatch(addToast('Invoices cannot be deleted by administrators'));
+      return;
+    }
     if (window.confirm(`Are you sure you want to delete this ${type.slice(0, -1)}?`)) {
       try {
         await dispatch(deleteFitnessItem({ type, id })).unwrap();
@@ -94,17 +98,20 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* TABLE 0: BILLING / ORDERS */}
+      {/* TABLE 0: BILLING / ORDERS (STRICTLY READ-ONLY FOR ADMIN) */}
       {adminTab === 'bills' && (
         <div id="adminTabBills" className="admin-subview flat-box overflow-hidden">
           <div className="p-3 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-            <span className="font-bold text-xs text-slate-800">Invoices & Customer Billing</span>
-            <button
-              onClick={() => dispatch(openCrudModal({ type: 'bills' }))}
-              className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flat-btn cursor-pointer"
-            >
-              + Create Bill
-            </button>
+            <div>
+              <span className="font-bold text-xs text-slate-800">Invoices & Customer Billing</span>
+              <p className="text-[11px] text-slate-500">
+                System-generated order invoices. In accordance with policy, bills cannot be created, updated, or deleted by administrators.
+              </p>
+            </div>
+            <span className="px-2.5 py-1 bg-slate-200 text-slate-700 text-xs font-mono rounded border border-slate-300 flex items-center space-x-1">
+              <i className="fa-solid fa-lock text-[10px]"></i>
+              <span>Read-Only Audit</span>
+            </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -116,14 +123,14 @@ const AdminDashboard = () => {
                   <th className="px-4 py-2">Amount</th>
                   <th className="px-4 py-2">Date</th>
                   <th className="px-4 py-2">Status</th>
-                  <th className="px-4 py-2 text-right">Actions</th>
+                  <th className="px-4 py-2 text-right">Audit Status</th>
                 </tr>
               </thead>
               <tbody id="adminBillsTbody" className="divide-y divide-slate-100">
                 {bills.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="px-4 py-6 text-center text-slate-400">
-                      No invoices found. Click "+ Create Bill" to add one.
+                      No invoices recorded yet. Customer checkout orders will appear here automatically.
                     </td>
                   </tr>
                 ) : (
@@ -150,19 +157,10 @@ const AdminDashboard = () => {
                           {b.status}
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-right space-x-2 whitespace-nowrap">
-                        <button
-                          onClick={() => handleToggleBillStatus(b.id)}
-                          className="text-slate-600 hover:text-black font-medium cursor-pointer"
-                        >
-                          {b.status === 'Paid' ? 'Mark Pending' : 'Mark Paid'}
-                        </button>
-                        <button
-                          onClick={() => handleDelete('bills', b.id)}
-                          className="text-red-600 hover:text-red-800 font-medium cursor-pointer"
-                        >
-                          Delete
-                        </button>
+                      <td className="px-4 py-2 text-right">
+                        <span className="text-slate-400 font-mono text-[11px]">
+                          Verified
+                        </span>
                       </td>
                     </tr>
                   ))

@@ -136,14 +136,9 @@ const CrudModal = () => {
 
     let dataToSave = {};
     if (type === 'bills') {
-      dataToSave = {
-        customerName: billCustomer.trim(),
-        email: billEmail.trim(),
-        items: billItems.trim(),
-        total: parseFloat(billTotal) || 0,
-        status: billStatus,
-        date: item?.date || new Date().toISOString().split('T')[0]
-      };
+      dispatch(addToast('Invoices cannot be created or modified by administrators'));
+      dispatch(closeCrudModal());
+      return;
     } else if (type === 'users') {
       dataToSave = {
         username: userUsername.trim(),

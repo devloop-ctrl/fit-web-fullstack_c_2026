@@ -257,37 +257,15 @@ app.post('/api/bills', async (req, res) => {
 });
 
 app.put('/api/bills/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updated = await Bill.findOneAndUpdate({ id }, req.body, { new: true });
-    res.json(updated);
-  } catch (error) {
-    res.status(500).json({ message: 'Error updating bill', error: error.message });
-  }
+  return res.status(403).json({ message: 'Prohibited: Invoices cannot be modified by administrators.' });
 });
 
 app.patch('/api/bills/:id/toggle-status', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const bill = await Bill.findOne({ id });
-    if (!bill) return res.status(404).json({ message: 'Bill not found' });
-
-    bill.status = bill.status === 'Paid' ? 'Pending' : 'Paid';
-    await bill.save();
-    res.json(bill);
-  } catch (error) {
-    res.status(500).json({ message: 'Error toggling bill status', error: error.message });
-  }
+  return res.status(403).json({ message: 'Prohibited: Invoice status cannot be modified by administrators.' });
 });
 
 app.delete('/api/bills/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await Bill.findOneAndDelete({ id });
-    res.json({ success: true, message: 'Bill deleted' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error deleting bill', error: error.message });
-  }
+  return res.status(403).json({ message: 'Prohibited: Invoices cannot be deleted by administrators.' });
 });
 
 /* ==========================================================================

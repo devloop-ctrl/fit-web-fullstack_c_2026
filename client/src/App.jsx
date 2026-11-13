@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import Header from './components/Header';
+import OutsideSystem from './components/OutsideSystem';
 import Calculators from './components/Calculators';
 import Store from './components/Store';
 import Workouts from './components/Workouts';
@@ -65,84 +66,85 @@ const FitPulseApp = () => {
   const { activePage, mode } = useSelector((state) => state.fitness);
   const user = useSelector((state) => state.user.user);
 
+  const isAuthenticated = Boolean(user);
+  const isAdmin = user?.role === 'Admin';
+
   useEffect(() => {
-    // Fetch initial fitness data with user role scoping
-    dispatch(fetchAllFitnessData({ role: user?.role, id: user?.id }));
+    // Only fetch internal system data if authenticated
+    if (user) {
+      dispatch(fetchAllFitnessData({ role: user?.role, id: user?.id }));
+    }
   }, [dispatch, user]);
 
-  // Sync route path with Redux active page and enforce Role-Based Access Control
+  // Sync route path with authentication state and enforce strict role separation
   useEffect(() => {
     const path = location.pathname.toLowerCase();
 
-    if (path === '/admin') {
-      if (!user) {
-        dispatch(setMode('user'));
-        dispatch(setActivePage('calculators'));
-        dispatch(addToast('Administrator login required to access Admin Dashboard'));
+    // 1. UN-AUTHENTICATED VISITOR (OUTSIDE SYSTEM)
+    if (!isAuthenticated) {
+      if (path === '/login') {
         dispatch(openAuthModal('login'));
-      } else if (user.role !== 'Admin') {
-        dispatch(setMode('admin')); // Will render AccessDenied view
-        dispatch(addToast('Access Denied: Administrator role required'));
-      } else {
-        dispatch(setMode('admin'));
+      } else if (path === '/register') {
+        dispatch(openAuthModal('register'));
+      } else if (path !== '/' && path !== '/welcome') {
+        // Visitor tried to access an internal service without logging in
+        dispatch(addToast('Please sign in or register to access FitPulse services'));
+        dispatch(openAuthModal('login'));
+        navigate('/', { replace: true });
       }
+      return;
+    }
+
+    // 2. AUTHENTICATED ADMINISTRATOR
+    if (isAdmin) {
+      dispatch(setMode('admin'));
+      if (path !== '/admin') {
+        navigate('/admin', { replace: true });
+      }
+      return;
+    }
+
+    // 3. AUTHENTICATED REGULAR MEMBER
+    dispatch(setMode('user'));
+    if (path === '/admin') {
+      // Forbidden: regular user cannot access admin
+      dispatch(addToast('Access denied: Administrator privileges required'));
     } else if (path === '/store') {
-      dispatch(setMode('user'));
       dispatch(setActivePage('store'));
     } else if (path === '/workouts') {
-      dispatch(setMode('user'));
       dispatch(setActivePage('workouts'));
-    } else if (path === '/calculators' || path === '/' || path === '/home') {
-      dispatch(setMode('user'));
+    } else if (path === '/calculators' || path === '/' || path === '/home' || path === '/login' || path === '/register') {
       dispatch(setActivePage('calculators'));
-      if (user) {
+      if (path !== '/calculators') {
+        navigate('/calculators', { replace: true });
+      }
+      if (user?.id) {
         dispatch(fetchRecords({ userId: user.id }));
       }
-    } else if (path === '/login') {
-      if (user) {
-        if (user.role === 'Admin') {
-          dispatch(setMode('admin'));
-          navigate('/admin', { replace: true });
-        } else {
-          dispatch(setMode('user'));
-          dispatch(setActivePage('calculators'));
-          navigate('/calculators', { replace: true });
-        }
-      } else {
-        dispatch(setMode('user'));
-        dispatch(setActivePage('calculators'));
-        dispatch(openAuthModal('login'));
-      }
-    } else if (path === '/register') {
-      if (user) {
-        dispatch(setMode('user'));
-        dispatch(setActivePage('calculators'));
-        navigate('/calculators', { replace: true });
-      } else {
-        dispatch(setMode('user'));
-        dispatch(setActivePage('calculators'));
-        dispatch(openAuthModal('register'));
-      }
     }
-  }, [location.pathname, user, dispatch, navigate]);
+  }, [location.pathname, isAuthenticated, isAdmin, user, dispatch, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-[#0f172a]">
       {/* Dynamic Toasts Notification */}
       <ToastContainer />
 
-      {/* Main Header with Role-Based Navigation */}
+      {/* Main Header with Specialized Navigation (Outside / Member / Admin) */}
       <Header />
 
       {/* Main Application Content Container */}
       <main className="max-w-6xl mx-auto px-4 py-6 flex-1 w-full">
-        {mode === 'admin' ? (
-          user?.role === 'Admin' ? (
-            <AdminDashboard />
-          ) : (
-            <AccessDenied />
-          )
+        {!isAuthenticated ? (
+          /* OUTSIDE SYSTEM PAGE (Shown before login & registration) */
+          <OutsideSystem />
+        ) : isAdmin ? (
+          /* DEDICATED ADMIN DASHBOARD */
+          <AdminDashboard />
+        ) : location.pathname.toLowerCase() === '/admin' ? (
+          /* REGULAR USER ATTEMPTING TO ACCESS ADMIN */
+          <AccessDenied />
         ) : (
+          /* REGULAR USER SERVICES (ONLY APPEAR AFTER USER LOGS IN) */
           <>
             {activePage === 'calculators' && <Calculators />}
             {activePage === 'store' && <Store />}
@@ -151,14 +153,14 @@ const FitPulseApp = () => {
         )}
       </main>
 
-      {/* Slide-out Cart Drawer */}
-      <CartDrawer />
+      {/* Slide-out Cart Drawer (Only for authenticated members, not for Admin or Guests) */}
+      {isAuthenticated && !isAdmin && <CartDrawer />}
 
       {/* Authentication Modal (Login / Register / Reset Password) */}
       <AuthModal />
 
-      {/* Admin CRUD Modal */}
-      <CrudModal />
+      {/* Admin CRUD Modal (Only available for Admin) */}
+      {isAdmin && <CrudModal />}
 
       {/* Footer */}
       <Footer />
@@ -171,6 +173,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<FitPulseApp />} />
+        <Route path="/welcome" element={<FitPulseApp />} />
         <Route path="/home" element={<FitPulseApp />} />
         <Route path="/calculators" element={<FitPulseApp />} />
         <Route path="/store" element={<FitPulseApp />} />
