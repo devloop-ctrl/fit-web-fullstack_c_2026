@@ -5,6 +5,7 @@
 # Environment variables & API credentials (CRITICAL FOR SECURITY)
 .env
 .env.*
+!.env.example
 *.env
 .env.local
 .env.development.local

@@ -1,6 +1,7 @@
 # Environment secrets & database credentials
 .env
 .env.*
+!.env.example
 *.env
 .env.local
 
