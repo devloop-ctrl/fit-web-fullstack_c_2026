@@ -45,6 +45,16 @@ export const resetPassword = createAsyncThunk('user/resetPassword', async (email
   }
 });
 
+// Change password (from member profile)
+export const changePassword = createAsyncThunk('user/changePassword', async (payload, { rejectWithValue }) => {
+  try {
+    const res = await axios.post('/api/auth/change-password', payload);
+    return res.data.message;
+  } catch (err) {
+    return rejectWithValue(getMessage(err));
+  }
+});
+
 // ------------------------------------------------------------
 // 3. Slice (state + reducers)
 // ------------------------------------------------------------
@@ -85,7 +95,12 @@ const UserSlice = createSlice({
       // Reset password
       .addCase(resetPassword.pending, (state) => { state.isLoading = true; })
       .addCase(resetPassword.fulfilled, (state) => { state.isLoading = false; })
-      .addCase(resetPassword.rejected, (state) => { state.isLoading = false; });
+      .addCase(resetPassword.rejected, (state) => { state.isLoading = false; })
+
+      // Change password
+      .addCase(changePassword.pending, (state) => { state.isLoading = true; })
+      .addCase(changePassword.fulfilled, (state) => { state.isLoading = false; })
+      .addCase(changePassword.rejected, (state) => { state.isLoading = false; });
   }
 });
 

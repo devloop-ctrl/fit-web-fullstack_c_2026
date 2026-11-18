@@ -14,10 +14,10 @@ import { Link } from 'react-router-dom';
 // ------------------------------------------------------------
 const SECTIONS = [
   ['bills', '/admin/bills', 'Billing & Invoices', 'Read-only audit log of customer checkout invoices', 'fa-file-invoice-dollar'],
-  ['users', '/admin/users', 'Users', 'Create, edit, and manage member and trainer accounts', 'fa-users'],
+  ['users', '/admin/users', 'Users', 'Create and view member and trainer accounts', 'fa-users'],
   ['workouts', '/admin/workouts', 'Workouts', 'Manage workout routines and exercise plans', 'fa-dumbbell'],
   ['tshirts', '/admin/tshirts', 'T-Shirts Inventory', 'Manage store apparel, pricing, and stock', 'fa-shirt'],
-  ['records', '/admin/records', 'Measurement Records', 'View and manage member body measurement logs', 'fa-notes-medical']
+  ['records', '/admin/records', 'Measurement Records', 'Create and view member body measurement logs', 'fa-notes-medical']
 ];
 
 // ------------------------------------------------------------

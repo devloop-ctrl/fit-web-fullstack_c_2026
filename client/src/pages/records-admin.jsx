@@ -1,6 +1,6 @@
 // ============================================================
 // Route: /admin/records
-// Admin page: CRUD for the measurement records of all members
+// Admin page: Create and Read measurement records of all members (no edit, update, or delete)
 // ============================================================
 
 // ------------------------------------------------------------
@@ -8,7 +8,7 @@
 // ------------------------------------------------------------
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { addItem, updateItem, deleteItem, addToast } from '../features/FitnessSlice';
+import { addItem, addToast } from '../features/FitnessSlice';
 
 // ------------------------------------------------------------
 // 2. Constants
@@ -26,7 +26,6 @@ const RecordsAdmin = () => {
 
   // --- Page state ---
   const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState(null); // null = creating a new record
   const [form, setForm] = useState(emptyForm);
 
   // --- Functions ---
@@ -38,42 +37,18 @@ const RecordsAdmin = () => {
 
   // "+ Add Record": open an empty form
   const handleAdd = () => {
-    setEditId(null);
     setForm(emptyForm);
     setShowForm(true);
   };
 
-  // "Edit": open the form with the record's data
-  const handleEdit = (record) => {
-    setEditId(record.id);
-    setForm({ ...emptyForm, ...record });
-    setShowForm(true);
-  };
-
-  // "Save": CREATE or UPDATE (the server calculates the BMI)
+  // "Save": CREATE (the server calculates the BMI)
   const handleSave = async (e) => {
     e.preventDefault();
 
     try {
-      if (editId) {
-        await dispatch(updateItem({ type: 'records', id: editId, data: form })).unwrap();
-      } else {
-        await dispatch(addItem({ type: 'records', data: form })).unwrap();
-      }
+      await dispatch(addItem({ type: 'records', data: form })).unwrap();
       setShowForm(false);
       dispatch(addToast('Record saved'));
-    } catch (message) {
-      dispatch(addToast(`Error: ${message}`));
-    }
-  };
-
-  // "Delete": DELETE
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this record?')) return;
-
-    try {
-      await dispatch(deleteItem({ type: 'records', id })).unwrap();
-      dispatch(addToast('Record deleted'));
     } catch (message) {
       dispatch(addToast(`Error: ${message}`));
     }
@@ -100,13 +75,12 @@ const RecordsAdmin = () => {
               <th className="px-4 py-2">BMI</th>
               <th className="px-4 py-2">Calories</th>
               <th className="px-4 py-2">Steps</th>
-              <th className="px-4 py-2 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {records.length === 0 && (
               <tr>
-                <td colSpan="6" className="px-4 py-6 text-center text-slate-400">No records found.</td>
+                <td colSpan="5" className="px-4 py-6 text-center text-slate-400">No records found.</td>
               </tr>
             )}
 
@@ -120,10 +94,6 @@ const RecordsAdmin = () => {
                 <td className="px-4 py-2 font-bold">{record.bmi}</td>
                 <td className="px-4 py-2">{record.calories} kcal</td>
                 <td className="px-4 py-2">{record.steps}</td>
-                <td className="px-4 py-2 text-right space-x-2">
-                  <button onClick={() => handleEdit(record)} className="text-slate-600 hover:text-black cursor-pointer">Edit</button>
-                  <button onClick={() => handleDelete(record.id)} className="text-red-600 hover:text-red-800 cursor-pointer">Delete</button>
-                </td>
               </tr>
             ))}
           </tbody>
@@ -131,11 +101,11 @@ const RecordsAdmin = () => {
         </div>
       </div>
 
-      {/* ---------------- CREATE / UPDATE form ---------------- */}
+      {/* ---------------- CREATE form ---------------- */}
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <form onSubmit={handleSave} className="bg-white rounded-lg max-w-md w-full p-4 space-y-3 shadow-xl">
-            <h3 className="font-bold text-sm">{editId ? 'Edit Record' : 'Add Record'}</h3>
+            <h3 className="font-bold text-sm">Add Record</h3>
 
             <input name="userId" value={form.userId} onChange={handleChange} placeholder="User ID (e.g. U-101)" required className={inputClass} />
             <input name="userEmail" type="email" value={form.userEmail} onChange={handleChange} placeholder="User email" className={inputClass} />

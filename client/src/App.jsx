@@ -29,6 +29,7 @@ import ResetPassword from './pages/reset-password';
 import CalculatorsMember from './pages/calculators-member';
 import StoreMember from './pages/store-member';
 import WorkoutsMember from './pages/workouts-member';
+import ProfileMember from './pages/profile-member';
 import AccessDeniedMember from './pages/access-denied-member';
 
 // Admin pages
@@ -60,6 +61,7 @@ const memberRoutes = (
     <Route path="/calculators" element={<CalculatorsMember />} />
     <Route path="/store" element={<StoreMember />} />
     <Route path="/workouts" element={<WorkoutsMember />} />
+    <Route path="/profile" element={<ProfileMember />} />
     <Route path="/admin/*" element={<AccessDeniedMember />} />
     <Route path="*" element={<Navigate to="/calculators" replace />} />
   </>

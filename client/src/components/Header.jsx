@@ -18,7 +18,6 @@ import { logout } from '../features/UserSlice';
 // 2. Constants: navigation links [url, label, icon]
 // ------------------------------------------------------------
 const ADMIN_LINKS = [
-  ['/admin', 'Dashboard', 'fa-gauge'],
   ['/admin/bills', 'Invoices', 'fa-file-invoice-dollar'],
   ['/admin/users', 'Users', 'fa-users'],
   ['/admin/workouts', 'Workouts', 'fa-dumbbell'],
@@ -29,7 +28,8 @@ const ADMIN_LINKS = [
 const MEMBER_LINKS = [
   ['/calculators', 'Calculators', 'fa-weight-scale'],
   ['/store', 'T-Shirts', 'fa-shirt'],
-  ['/workouts', 'Workouts', 'fa-dumbbell']
+  ['/workouts', 'Workouts', 'fa-dumbbell'],
+  ['/profile', 'Profile', 'fa-user']
 ];
 
 // ------------------------------------------------------------
@@ -146,9 +146,9 @@ const Header = () => {
               <span className="hidden sm:inline">Cart</span>
               <span className="bg-slate-900 text-white text-xs px-1.5 rounded font-mono">{cartCount}</span>
             </button>
-            <span className="bg-slate-100 px-2 py-1 rounded text-slate-800 text-xs font-semibold max-w-[120px] truncate">
+            <Link to="/profile" className="bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-800 text-xs font-semibold max-w-[120px] truncate transition-colors">
               <i className="fa-regular fa-user mr-1.5"></i>{user.name || user.username}
-            </span>
+            </Link>
             <button onClick={handleLogout} title="Sign Out" className="text-xs text-red-600 hover:text-red-800 p-1.5 rounded hover:bg-red-50 cursor-pointer">
               <i className="fa-solid fa-right-from-bracket"></i>
             </button>

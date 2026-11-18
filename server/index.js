@@ -131,7 +131,37 @@ app.post('/api/auth/reset-password', (req, res) => {
   res.json({ message: `If ${req.body.email} is registered, reset instructions have been sent.` });
 });
 
-// ---------------- Users (CRUD) ----------------
+// Change password (logged-in user updates their own password)
+app.post('/api/auth/change-password', async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required' });
+    }
+    if (newPassword.length < 4) {
+      return res.status(400).json({ message: 'New password must be at least 4 characters long' });
+    }
+
+    const user = await User.findOne({ id: userId });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const passwordIsCorrect = await bcrypt.compare(currentPassword, user.password);
+    if (!passwordIsCorrect) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ---------------- Users (Create & Read) ----------------
 
 // READ all
 app.get('/api/users', async (req, res) => {
@@ -167,40 +197,13 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// UPDATE
-app.put('/api/users/:id', async (req, res) => {
-  try {
-    const { username, name, email, phone, role } = req.body;
+// ---------------- Bills (created at checkout; admin reads all, member reads own) ----------------
 
-    const user = await User.findOneAndUpdate(
-      { id: req.params.id },
-      { username, name, email, phone, role },
-      { new: true }
-    ).select('-password');
-
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// DELETE
-app.delete('/api/users/:id', async (req, res) => {
-  try {
-    await User.findOneAndDelete({ id: req.params.id });
-    res.json({ message: 'User deleted' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// ---------------- Bills (created at checkout, admin only reads) ----------------
-
-// READ all
+// READ all, or only one member's bills with ?email=...
 app.get('/api/bills', async (req, res) => {
   try {
-    res.json(await Bill.find().sort({ createdAt: -1 }));
+    const filter = req.query.email ? { email: exactText(req.query.email.trim()) } : {};
+    res.json(await Bill.find(filter).sort({ createdAt: -1 }));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -323,7 +326,7 @@ app.delete('/api/tshirts/:id', async (req, res) => {
   }
 });
 
-// ---------------- Records (CRUD) ----------------
+// ---------------- Records (Create, Read, Member Delete) ----------------
 
 // READ: all records, or only one member's records with ?userId=...
 app.get('/api/records', async (req, res) => {
@@ -364,31 +367,7 @@ app.post('/api/records', async (req, res) => {
   }
 });
 
-// UPDATE
-app.put('/api/records/:id', async (req, res) => {
-  try {
-    const { userId, userEmail, name, height, weight, calories, steps } = req.body;
-    const h = Number(height);
-    const w = Number(weight);
-
-    if (h <= 0 || w <= 0) {
-      return res.status(400).json({ message: 'Valid height and weight are required' });
-    }
-
-    const record = await Record.findOneAndUpdate(
-      { id: req.params.id },
-      { userId, userEmail, name, height: h, weight: w, bmi: calcBmi(h, w), calories: Number(calories), steps: Number(steps) },
-      { new: true }
-    );
-
-    if (!record) return res.status(404).json({ message: 'Record not found' });
-    res.json(record);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// DELETE
+// DELETE (used by members on their own records)
 app.delete('/api/records/:id', async (req, res) => {
   try {
     await Record.findOneAndDelete({ id: req.params.id });

@@ -1,6 +1,6 @@
 // ============================================================
 // Route: /admin/users
-// Admin page: CRUD for users (Create, Read, Update, Delete)
+// Admin page: Create and Read users (no edit, update, or delete)
 // ============================================================
 
 // ------------------------------------------------------------
@@ -8,7 +8,7 @@
 // ------------------------------------------------------------
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { addItem, updateItem, deleteItem, addToast } from '../features/FitnessSlice';
+import { addItem, addToast } from '../features/FitnessSlice';
 
 // ------------------------------------------------------------
 // 2. Constants
@@ -26,7 +26,6 @@ const UsersAdmin = () => {
 
   // --- Page state ---
   const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState(null); // null = creating a new user
   const [form, setForm] = useState(emptyForm);
 
   // --- Functions ---
@@ -38,43 +37,18 @@ const UsersAdmin = () => {
 
   // "+ Add User": open an empty form
   const handleAdd = () => {
-    setEditId(null);
     setForm(emptyForm);
     setShowForm(true);
   };
 
-  // "Edit": open the form with the user's data
-  const handleEdit = (user) => {
-    setEditId(user.id);
-    setForm({ ...emptyForm, ...user, password: '' });
-    setShowForm(true);
-  };
-
-  // "Save": CREATE or UPDATE
+  // "Save": CREATE
   const handleSave = async (e) => {
     e.preventDefault();
 
     try {
-      if (editId) {
-        const { username, name, email, phone, role } = form;
-        await dispatch(updateItem({ type: 'users', id: editId, data: { username, name, email, phone, role } })).unwrap();
-      } else {
-        await dispatch(addItem({ type: 'users', data: form })).unwrap();
-      }
+      await dispatch(addItem({ type: 'users', data: form })).unwrap();
       setShowForm(false);
       dispatch(addToast('User saved'));
-    } catch (message) {
-      dispatch(addToast(`Error: ${message}`));
-    }
-  };
-
-  // "Delete": DELETE
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this user?')) return;
-
-    try {
-      await dispatch(deleteItem({ type: 'users', id })).unwrap();
-      dispatch(addToast('User deleted'));
     } catch (message) {
       dispatch(addToast(`Error: ${message}`));
     }
@@ -101,13 +75,12 @@ const UsersAdmin = () => {
                 <th className="px-4 py-2">Email</th>
                 <th className="px-4 py-2">Phone</th>
                 <th className="px-4 py-2">Role</th>
-                <th className="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {users.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="px-4 py-6 text-center text-slate-400">No users found.</td>
+                  <td colSpan="5" className="px-4 py-6 text-center text-slate-400">No users found.</td>
                 </tr>
               )}
 
@@ -118,10 +91,6 @@ const UsersAdmin = () => {
                   <td className="px-4 py-2">{user.email}</td>
                   <td className="px-4 py-2">{user.phone}</td>
                   <td className="px-4 py-2">{user.role}</td>
-                  <td className="px-4 py-2 text-right space-x-2">
-                    <button onClick={() => handleEdit(user)} className="text-slate-600 hover:text-black cursor-pointer">Edit</button>
-                    <button onClick={() => handleDelete(user.id)} className="text-red-600 hover:text-red-800 cursor-pointer">Delete</button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -129,11 +98,11 @@ const UsersAdmin = () => {
         </div>
       </div>
 
-      {/* ---------------- CREATE / UPDATE form ---------------- */}
+      {/* ---------------- CREATE form ---------------- */}
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <form onSubmit={handleSave} className="bg-white rounded-lg max-w-md w-full p-4 space-y-3 shadow-xl">
-            <h3 className="font-bold text-sm">{editId ? 'Edit User' : 'Add User'}</h3>
+            <h3 className="font-bold text-sm">Add User</h3>
 
             <input name="username" value={form.username} onChange={handleChange} placeholder="Username" required className={inputClass} />
             <input name="name" value={form.name} onChange={handleChange} placeholder="Full name" required className={inputClass} />
@@ -146,10 +115,7 @@ const UsersAdmin = () => {
               <option value="Admin">Admin</option>
             </select>
 
-            {/* Password is only needed when creating a user */}
-            {!editId && (
-              <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Password" required className={inputClass} />
-            )}
+            <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Password" required className={inputClass} />
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="px-3 py-1.5 border border-slate-200 text-xs cursor-pointer">Cancel</button>

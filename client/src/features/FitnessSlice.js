@@ -10,6 +10,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { logout } from './UserSlice';
+import { checkout } from './CartSlice';
 
 // ------------------------------------------------------------
 // 2. Helper
@@ -37,8 +38,9 @@ export const fetchData = createAsyncThunk('fitness/fetchData', async (user, { re
       data.users = (await axios.get('/api/users')).data;
       data.bills = (await axios.get('/api/bills')).data;
     } else {
-      // Member gets only his own records
+      // Member gets only his own records and bills
       data.records = (await axios.get(`/api/records?userId=${user.id}`)).data;
+      data.bills = (await axios.get(`/api/bills?email=${encodeURIComponent(user.email)}`)).data;
     }
 
     return data;
@@ -142,6 +144,11 @@ const FitnessSlice = createSlice({
       .addCase(deleteItem.fulfilled, (state, action) => {
         const { type, id } = action.payload;
         state[type] = state[type].filter((x) => x.id !== id);
+      })
+
+      // Checkout done: add the newly created bill to the member's bills list
+      .addCase(checkout.fulfilled, (state, action) => {
+        state.bills.unshift(action.payload);
       });
   }
 });
