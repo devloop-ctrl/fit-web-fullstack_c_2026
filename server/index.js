@@ -1,7 +1,6 @@
 // ============================================================
-// FitPulse server (Express + MongoDB)
-// The file is read from top to bottom:
-//   1. Imports  2. Setup  3. Helpers  4. Routes  5. Start server
+// FitPulse server (Node + Express + MongoDB)
+// Read from top to bottom: Imports -> Setup -> Routes -> Start
 // ============================================================
 
 // ------------------------------------------------------------
@@ -22,19 +21,20 @@ import Record from './models/Record.js';
 import { seedDatabase } from './seedData.js';
 
 // ------------------------------------------------------------
-// 2. Setup: environment, database connection, and Express app
+// 2. Setup
 // ------------------------------------------------------------
 
-// Reliable DNS lookups for mongodb+srv:// addresses
+// Reliable DNS for mongodb+srv:// addresses
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
-// Settings come from server/.env (never write secrets inside the code)
-const { PORT = 3003, MONGODB_URI } = process.env;
+// Settings come from server/.env (no secrets inside the code)
+const PORT = process.env.PORT || 3003;
+const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   throw new Error('MONGODB_URI is missing. Copy server/.env.example to server/.env and set it.');
 }
 
-// Connect to the database, then add starter data if the database is empty
+// Connect to the database, then add starter data if it is empty
 mongoose
   .connect(MONGODB_URI)
   .then(async () => {
@@ -43,227 +43,362 @@ mongoose
   })
   .catch((err) => console.error('Database connection error:', err.message));
 
-// Create the app
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Small helpers
+const newId = (prefix) => `${prefix}-${Date.now().toString().slice(-6)}`;
+
+const exactText = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+
+const calcBmi = (height, weight) => Number((weight / ((height / 100) * (height / 100))).toFixed(1));
+
 // ------------------------------------------------------------
-// 3. Helper functions
+// 3. Routes
 // ------------------------------------------------------------
 
-// Wrap a route so any error becomes a clean 500 response
-const route = (handler) => async (req, res) => {
+// ---------------- Auth ----------------
+
+// Login: find the user by username or email, then check the password
+app.post('/api/auth/login', async (req, res) => {
   try {
-    await handler(req, res);
+    const username = (req.body.username || '').trim();
+    const password = req.body.password || '';
+
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username or email and password are required' });
+    }
+
+    const user = await User.findOne({ $or: [{ username: exactText(username) }, { email: exactText(username) }] });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    const passwordIsCorrect = await bcrypt.compare(password, user.password);
+    if (!passwordIsCorrect) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    // Send the user without the password
+    const { id, name, email, phone, role } = user;
+    res.json({ user: { id, username: user.username, name, email, phone, role } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-};
+});
 
-// Make a new id like "U-123456"
-const newId = (prefix) => `${prefix}-${Date.now().toString().slice(-6)}`;
+// Register: create a new member with a hashed password
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const username = (req.body.username || '').trim();
+    const email = (req.body.email || '').trim();
+    const phone = (req.body.phone || '').trim();
+    const password = req.body.password || '';
 
-// Build a case-insensitive "exactly equals" search pattern
-const exactMatch = (value) => new RegExp(`^${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: 'Username, email, and password are required' });
+    }
+    if (password.length < 4) {
+      return res.status(400).json({ message: 'Password must be at least 4 characters long' });
+    }
 
-// The user fields that are safe to send to the browser (no password)
-const publicUser = ({ id, username, name, email, phone, role }) => ({ id, username, name, email, phone, role });
+    const exists = await User.findOne({ $or: [{ username: exactText(username) }, { email: exactText(email) }] });
+    if (exists) {
+      return res.status(400).json({ message: 'Username or email is already registered' });
+    }
 
-// Add the BMI to a record using its height and weight
-const withBmi = (data) => ({ ...data, bmi: +(data.weight / (data.height / 100) ** 2).toFixed(1) });
+    const user = await User.create({
+      id: newId('U'),
+      username,
+      name: username,
+      email,
+      phone,
+      role: 'Member',
+      password: await bcrypt.hash(password, 10)
+    });
 
-// Create the 4 standard routes (list, create, update, delete) for a model
-const addCrudRoutes = (path, Model, idPrefix) => {
-  // List all
-  app.get(path, route(async (req, res) => {
-    res.json(await Model.find().sort({ createdAt: -1 }));
-  }));
-
-  // Create
-  app.post(path, route(async (req, res) => {
-    res.status(201).json(await Model.create({ ...req.body, id: newId(idPrefix) }));
-  }));
-
-  // Update
-  app.put(`${path}/:id`, route(async (req, res) => {
-    res.json(await Model.findOneAndUpdate({ id: req.params.id }, req.body, { new: true, runValidators: true }));
-  }));
-
-  // Delete
-  app.delete(`${path}/:id`, route(async (req, res) => {
-    await Model.findOneAndDelete({ id: req.params.id });
-    res.json({ message: 'Deleted' });
-  }));
-};
-
-// ------------------------------------------------------------
-// 4. Routes
-// ------------------------------------------------------------
-
-// ---------------- 4.1 Auth ----------------
-
-// POST /api/auth/login
-app.post('/api/auth/login', route(async (req, res) => {
-  const { username = '', password } = req.body;
-
-  // Step 1: both fields are required
-  if (!username.trim() || !password) {
-    return res.status(400).json({ message: 'Username or email and password are required' });
+    res.status(201).json({
+      user: { id: user.id, username, name: user.name, email, phone, role: user.role }
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+});
 
-  // Step 2: find the user by username or email
-  const user = await User.findOne({
-    $or: [{ username: exactMatch(username.trim()) }, { email: exactMatch(username.trim()) }]
-  });
-
-  // Step 3: check the password (stored as a bcrypt hash)
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({ message: 'Invalid username or password' });
-  }
-
-  // Step 4: send the user back (without the password)
-  res.json({ user: publicUser(user) });
-}));
-
-// POST /api/auth/register
-app.post('/api/auth/register', route(async (req, res) => {
-  const { username = '', email = '', phone = '', password = '' } = req.body;
-
-  // Step 1: check the input
-  if (!username.trim() || !email.trim() || !password) {
-    return res.status(400).json({ message: 'Username, email, and password are required' });
-  }
-  if (password.length < 4) {
-    return res.status(400).json({ message: 'Password must be at least 4 characters long' });
-  }
-
-  // Step 2: username and email must not be used already
-  if (await User.exists({ username: exactMatch(username.trim()) })) {
-    return res.status(400).json({ message: 'Username is already taken' });
-  }
-  if (await User.exists({ email: exactMatch(email.trim()) })) {
-    return res.status(400).json({ message: 'Email is already registered' });
-  }
-
-  // Step 3: save the new member with a hashed password
-  const user = await User.create({
-    id: newId('U'),
-    username: username.trim(),
-    name: username.trim(),
-    email: email.trim(),
-    phone: phone.trim(),
-    role: 'Member',
-    password: await bcrypt.hash(password, 10)
-  });
-
-  res.status(201).json({ user: publicUser(user) });
-}));
-
-// POST /api/auth/reset-password
-app.post('/api/auth/reset-password', route(async (req, res) => {
+// Reset password (shows a message only)
+app.post('/api/auth/reset-password', (req, res) => {
   res.json({ message: `If ${req.body.email} is registered, reset instructions have been sent.` });
-}));
+});
 
-// ---------------- 4.2 Users (admin) ----------------
+// ---------------- Users (CRUD) ----------------
 
-// GET /api/users
-app.get('/api/users', route(async (req, res) => {
-  res.json(await User.find().select('-password').sort({ createdAt: -1 }));
-}));
-
-// POST /api/users
-app.post('/api/users', route(async (req, res) => {
-  const { username, name, email, phone, role, password } = req.body;
-
-  if (!password) {
-    return res.status(400).json({ message: 'Password is required' });
+// READ all
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+});
 
-  const user = await User.create({
-    id: newId('U'),
-    username,
-    name: name || username,
-    email,
-    phone,
-    role,
-    password: await bcrypt.hash(password, 10)
-  });
+// CREATE
+app.post('/api/users', async (req, res) => {
+  try {
+    const { username, name, email, phone, role, password } = req.body;
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: 'Username, email, and password are required' });
+    }
 
-  res.status(201).json(publicUser(user));
-}));
+    const user = await User.create({
+      id: newId('U'),
+      username,
+      name: name || username,
+      email,
+      phone,
+      role,
+      password: await bcrypt.hash(password, 10)
+    });
 
-// PUT /api/users/:id
-app.put('/api/users/:id', route(async (req, res) => {
-  const { username, name, email, phone, role } = req.body;
-
-  const user = await User.findOneAndUpdate(
-    { id: req.params.id },
-    { username, name, email, phone, role },
-    { new: true }
-  ).select('-password');
-
-  res.json(user);
-}));
-
-// DELETE /api/users/:id
-app.delete('/api/users/:id', route(async (req, res) => {
-  await User.findOneAndDelete({ id: req.params.id });
-  res.json({ message: 'User deleted' });
-}));
-
-// ---------------- 4.3 Bills (created at checkout, read-only for admin) ----------------
-
-// GET /api/bills
-app.get('/api/bills', route(async (req, res) => {
-  res.json(await Bill.find().sort({ createdAt: -1 }));
-}));
-
-// POST /api/bills
-app.post('/api/bills', route(async (req, res) => {
-  const { customerName, email, items, total, status } = req.body;
-  res.status(201).json(await Bill.create({ id: newId('INV'), customerName, email, items, total, status }));
-}));
-
-// ---------------- 4.4 Workouts and T-shirts (simple CRUD) ----------------
-addCrudRoutes('/api/workouts', Workout, 'W');
-addCrudRoutes('/api/tshirts', Tshirt, 'TS');
-
-// ---------------- 4.5 Records (a member sees only theirs, admin sees all) ----------------
-
-// GET /api/records?userId=...  or  /api/records?isAdmin=true
-app.get('/api/records', route(async (req, res) => {
-  const { userId, isAdmin } = req.query;
-
-  // No user and not admin: return nothing
-  if (isAdmin !== 'true' && !userId) {
-    return res.json([]);
+    res.status(201).json({ id: user.id, username, name: user.name, email, phone, role: user.role });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+});
 
-  const filter = isAdmin === 'true' ? {} : { userId };
-  res.json(await Record.find(filter).sort({ createdAt: -1 }));
-}));
+// UPDATE
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { username, name, email, phone, role } = req.body;
 
-// POST /api/records
-app.post('/api/records', route(async (req, res) => {
-  if (!req.body.userId) {
-    return res.status(400).json({ message: 'Please log in to save your health records.' });
+    const user = await User.findOneAndUpdate(
+      { id: req.params.id },
+      { username, name, email, phone, role },
+      { new: true }
+    ).select('-password');
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-  res.status(201).json(await Record.create(withBmi({ ...req.body, id: newId('R') })));
-}));
+});
 
-// PUT /api/records/:id
-app.put('/api/records/:id', route(async (req, res) => {
-  res.json(await Record.findOneAndUpdate({ id: req.params.id }, withBmi(req.body), { new: true, runValidators: true }));
-}));
+// DELETE
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    await User.findOneAndDelete({ id: req.params.id });
+    res.json({ message: 'User deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
-// DELETE /api/records/:id
-app.delete('/api/records/:id', route(async (req, res) => {
-  await Record.findOneAndDelete({ id: req.params.id });
-  res.json({ message: 'Record deleted' });
-}));
+// ---------------- Bills (created at checkout, admin only reads) ----------------
+
+// READ all
+app.get('/api/bills', async (req, res) => {
+  try {
+    res.json(await Bill.find().sort({ createdAt: -1 }));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// CREATE
+app.post('/api/bills', async (req, res) => {
+  try {
+    const { customerName, email, items, total, status } = req.body;
+    const bill = await Bill.create({ id: newId('INV'), customerName, email, items, total, status });
+    res.status(201).json(bill);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ---------------- Workouts (CRUD) ----------------
+
+// READ all
+app.get('/api/workouts', async (req, res) => {
+  try {
+    res.json(await Workout.find().sort({ createdAt: -1 }));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// CREATE
+app.post('/api/workouts', async (req, res) => {
+  try {
+    const { title, category, difficulty, duration, exercises } = req.body;
+    const workout = await Workout.create({ id: newId('W'), title, category, difficulty, duration, exercises });
+    res.status(201).json(workout);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// UPDATE
+app.put('/api/workouts/:id', async (req, res) => {
+  try {
+    const { title, category, difficulty, duration, exercises } = req.body;
+    const workout = await Workout.findOneAndUpdate(
+      { id: req.params.id },
+      { title, category, difficulty, duration, exercises },
+      { new: true }
+    );
+
+    if (!workout) return res.status(404).json({ message: 'Workout not found' });
+    res.json(workout);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// DELETE
+app.delete('/api/workouts/:id', async (req, res) => {
+  try {
+    await Workout.findOneAndDelete({ id: req.params.id });
+    res.json({ message: 'Workout deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ---------------- T-shirts (CRUD) ----------------
+
+// READ all
+app.get('/api/tshirts', async (req, res) => {
+  try {
+    res.json(await Tshirt.find().sort({ createdAt: -1 }));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// CREATE
+app.post('/api/tshirts', async (req, res) => {
+  try {
+    const { title, price, stock, color, image, desc } = req.body;
+    const tshirt = await Tshirt.create({
+      id: newId('TS'),
+      title,
+      price: Number(price),
+      stock: Number(stock),
+      color,
+      image,
+      desc
+    });
+    res.status(201).json(tshirt);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// UPDATE
+app.put('/api/tshirts/:id', async (req, res) => {
+  try {
+    const { title, price, stock, color, image, desc } = req.body;
+    const tshirt = await Tshirt.findOneAndUpdate(
+      { id: req.params.id },
+      { title, price: Number(price), stock: Number(stock), color, image, desc },
+      { new: true }
+    );
+
+    if (!tshirt) return res.status(404).json({ message: 'T-shirt not found' });
+    res.json(tshirt);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// DELETE
+app.delete('/api/tshirts/:id', async (req, res) => {
+  try {
+    await Tshirt.findOneAndDelete({ id: req.params.id });
+    res.json({ message: 'T-shirt deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ---------------- Records (CRUD) ----------------
+
+// READ: all records, or only one member's records with ?userId=...
+app.get('/api/records', async (req, res) => {
+  try {
+    const filter = req.query.userId ? { userId: req.query.userId } : {};
+    res.json(await Record.find(filter).sort({ createdAt: -1 }));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// CREATE (the BMI is calculated here from height and weight)
+app.post('/api/records', async (req, res) => {
+  try {
+    const { userId, userEmail, name, height, weight, calories, steps } = req.body;
+    const h = Number(height);
+    const w = Number(weight);
+
+    if (!userId || h <= 0 || w <= 0) {
+      return res.status(400).json({ message: 'User ID, valid height, and valid weight are required' });
+    }
+
+    const record = await Record.create({
+      id: newId('R'),
+      userId,
+      userEmail,
+      name,
+      height: h,
+      weight: w,
+      bmi: calcBmi(h, w),
+      calories: Number(calories),
+      steps: Number(steps)
+    });
+
+    res.status(201).json(record);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// UPDATE
+app.put('/api/records/:id', async (req, res) => {
+  try {
+    const { userId, userEmail, name, height, weight, calories, steps } = req.body;
+    const h = Number(height);
+    const w = Number(weight);
+
+    if (h <= 0 || w <= 0) {
+      return res.status(400).json({ message: 'Valid height and weight are required' });
+    }
+
+    const record = await Record.findOneAndUpdate(
+      { id: req.params.id },
+      { userId, userEmail, name, height: h, weight: w, bmi: calcBmi(h, w), calories: Number(calories), steps: Number(steps) },
+      { new: true }
+    );
+
+    if (!record) return res.status(404).json({ message: 'Record not found' });
+    res.json(record);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// DELETE
+app.delete('/api/records/:id', async (req, res) => {
+  try {
+    await Record.findOneAndDelete({ id: req.params.id });
+    res.json({ message: 'Record deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // ------------------------------------------------------------
-// 5. Start the server
+// 4. Start the server
 // ------------------------------------------------------------
 app.listen(PORT, () => console.log(`FitPulse server running on port ${PORT}`));

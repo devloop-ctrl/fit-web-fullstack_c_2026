@@ -9,88 +9,69 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
 // ------------------------------------------------------------
-// 2. Constants and small helpers
-// ------------------------------------------------------------
-const STORAGE_KEY = 'fp_cart_data';
-const TAX_RATE = 0.05; // 5% tax
-
-// Save the cart in the browser so it survives a refresh
-const saveCart = (items) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-};
-
-// Calculate subtotal, tax, and total from the cart items
-export const cartTotals = (items) => {
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const tax = subtotal * TAX_RATE;
-  return { subtotal, tax, total: subtotal + tax };
-};
-
-// ------------------------------------------------------------
-// 3. Async thunks (talk to the server)
+// 2. Async thunk (talk to the server)
 // ------------------------------------------------------------
 
-// Checkout: turn the cart into a bill saved in the database
-export const checkout = createAsyncThunk('cart/checkout', async (_, { getState, rejectWithValue }) => {
-  const { cart, user } = getState();
-
+// CREATE a bill in the database when the member pays
+export const checkout = createAsyncThunk('cart/checkout', async (bill, { rejectWithValue }) => {
   try {
-    const { data } = await axios.post('/api/bills', {
-      customerName: user.user.name || user.user.username,
-      email: user.user.email,
-      items: cart.items.map((item) => `${item.title} (x${item.qty})`).join(', '),
-      total: +cartTotals(cart.items).total.toFixed(2),
-      status: 'Paid'
-    });
-    return data;
+    const res = await axios.post('/api/bills', bill);
+    return res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || err.message);
   }
 });
 
 // ------------------------------------------------------------
-// 4. Slice (state + reducers)
+// 3. Slice (state + reducers)
 // ------------------------------------------------------------
+
+// Save the cart in the browser so it stays after refresh
+const saveCart = (items) => {
+  localStorage.setItem('fp_cart_data', JSON.stringify(items));
+};
+
 const CartSlice = createSlice({
   name: 'cart',
-
-  // Start with the cart saved in the browser (or empty)
   initialState: {
-    items: JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'),
+    items: JSON.parse(localStorage.getItem('fp_cart_data') || '[]'),
     isDrawerOpen: false
   },
 
   reducers: {
-    // Open or close the cart drawer
+    // Open or close the drawer (true / false)
     toggleCartDrawer: (state, action) => {
-      state.isDrawerOpen = action.payload ?? !state.isDrawerOpen;
+      state.isDrawerOpen = action.payload;
     },
 
-    // Add a shirt (or increase its quantity if it is already in the cart)
+    // Add a shirt, or +1 if it is already in the cart
     addToCart: (state, action) => {
-      const { id, title, price, color, image } = action.payload;
-      const existing = state.items.find((item) => item.id === id);
+      const shirt = action.payload;
+      const existing = state.items.find((item) => item.id === shirt.id);
 
       if (existing) {
         existing.qty += 1;
       } else {
-        state.items.push({ id, title, price, color, image, qty: 1 });
+        state.items.push({ id: shirt.id, title: shirt.title, price: shirt.price, qty: 1 });
       }
       saveCart(state.items);
     },
 
-    // Change a quantity by +1 or -1 (the item is removed when it reaches 0)
+    // Change quantity by +1 or -1 (remove the item when it reaches 0)
     updateCartQty: (state, action) => {
-      const { id, delta } = action.payload;
+      const item = state.items.find((x) => x.id === action.payload.id);
+      if (!item) return;
 
-      state.items = state.items
-        .map((item) => (item.id === id ? { ...item, qty: item.qty + delta } : item))
-        .filter((item) => item.qty > 0);
+      item.qty += action.payload.delta;
+
+      if (item.qty <= 0) {
+        state.items = state.items.filter((x) => x.id !== item.id);
+      }
       saveCart(state.items);
     }
   },
 
-  // After a successful checkout: empty the cart and close the drawer
+  // After payment: empty the cart and close the drawer
   extraReducers: (builder) => {
     builder.addCase(checkout.fulfilled, (state) => {
       state.items = [];
@@ -101,7 +82,7 @@ const CartSlice = createSlice({
 });
 
 // ------------------------------------------------------------
-// 5. Exports
+// 4. Exports
 // ------------------------------------------------------------
 export const { toggleCartDrawer, addToCart, updateCartQty } = CartSlice.actions;
 export default CartSlice.reducer;

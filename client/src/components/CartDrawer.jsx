@@ -6,40 +6,40 @@
 // 1. Imports
 // ------------------------------------------------------------
 import { useSelector, useDispatch } from 'react-redux';
-import { toggleCartDrawer, updateCartQty, checkout, cartTotals } from '../features/CartSlice';
+import { toggleCartDrawer, updateCartQty, checkout } from '../features/CartSlice';
 import { addToast } from '../features/FitnessSlice';
 
 // ------------------------------------------------------------
-// 2. Constants
-// ------------------------------------------------------------
-const QTY_BUTTON_STYLE =
-  'w-5 h-5 border border-slate-200 flex items-center justify-center flat-btn text-slate-600 hover:bg-slate-100 cursor-pointer';
-
-// ------------------------------------------------------------
-// 3. CartDrawer component
+// 2. CartDrawer component
 // ------------------------------------------------------------
 const CartDrawer = () => {
   // --- Data from Redux ---
   const dispatch = useDispatch();
   const { items, isDrawerOpen } = useSelector((state) => state.cart);
+  const user = useSelector((state) => state.user.user);
 
-  // --- Calculated values ---
-  const { subtotal, tax, total } = cartTotals(items);
+  // --- Totals ---
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const tax = subtotal * 0.05;
+  const total = subtotal + tax;
 
   // --- Functions ---
 
-  // Close the drawer
-  const handleClose = () => {
-    dispatch(toggleCartDrawer(false));
-  };
-
-  // Send the order to the server and create a bill
+  // Pay: create a bill in the database
   const handleCheckout = async () => {
+    const bill = {
+      customerName: user.name || user.username,
+      email: user.email,
+      items: items.map((item) => `${item.title} (x${item.qty})`).join(', '),
+      total: Number(total.toFixed(2)),
+      status: 'Paid'
+    };
+
     try {
-      const bill = await dispatch(checkout()).unwrap();
-      dispatch(addToast(`Bill ${bill.id} created & order paid!`));
-    } catch (msg) {
-      dispatch(addToast(`Checkout error: ${msg}`));
+      const created = await dispatch(checkout(bill)).unwrap();
+      dispatch(addToast(`Bill ${created.id} created`));
+    } catch (message) {
+      dispatch(addToast(`Checkout error: ${message}`));
     }
   };
 
@@ -47,7 +47,9 @@ const CartDrawer = () => {
   return (
     <>
       {/* ---------------- Dark background (click to close) ---------------- */}
-      {isDrawerOpen && <div onClick={handleClose} className="fixed inset-0 bg-black/40 z-40" />}
+      {isDrawerOpen && (
+        <div onClick={() => dispatch(toggleCartDrawer(false))} className="fixed inset-0 bg-black/40 z-40" />
+      )}
 
       {/* ---------------- Drawer ---------------- */}
       <div
@@ -58,7 +60,7 @@ const CartDrawer = () => {
         {/* ---------------- Title ---------------- */}
         <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
           <span className="font-bold text-sm text-slate-900">Shopping Cart</span>
-          <button onClick={handleClose} className="text-slate-500 hover:text-black cursor-pointer">
+          <button onClick={() => dispatch(toggleCartDrawer(false))} className="text-slate-500 hover:text-black cursor-pointer">
             <i className="fa-solid fa-xmark"></i>
           </button>
         </div>
@@ -75,23 +77,23 @@ const CartDrawer = () => {
               </div>
 
               <div className="flex items-center space-x-1.5">
-                <button onClick={() => dispatch(updateCartQty({ id: item.id, delta: -1 }))} className={QTY_BUTTON_STYLE}>-</button>
+                <button onClick={() => dispatch(updateCartQty({ id: item.id, delta: -1 }))} className="w-5 h-5 border border-slate-200 hover:bg-slate-100 cursor-pointer">-</button>
                 <span className="w-4 text-center font-mono">{item.qty}</span>
-                <button onClick={() => dispatch(updateCartQty({ id: item.id, delta: 1 }))} className={QTY_BUTTON_STYLE}>+</button>
+                <button onClick={() => dispatch(updateCartQty({ id: item.id, delta: 1 }))} className="w-5 h-5 border border-slate-200 hover:bg-slate-100 cursor-pointer">+</button>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ---------------- Totals + checkout button ---------------- */}
+        {/* ---------------- Totals + pay button ---------------- */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 space-y-2 text-xs">
           <div className="flex justify-between text-slate-600">
             <span>Subtotal</span>
-            <span className="font-medium text-slate-900">${subtotal.toFixed(2)}</span>
+            <span>${subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-slate-600">
             <span>Tax (5%)</span>
-            <span className="font-medium text-slate-900">${tax.toFixed(2)}</span>
+            <span>${tax.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm font-bold text-slate-900 pt-1 border-t border-slate-200">
             <span>Total</span>
@@ -101,7 +103,7 @@ const CartDrawer = () => {
           <button
             onClick={handleCheckout}
             disabled={items.length === 0}
-            className="w-full py-2.5 text-white font-medium text-xs flat-btn mt-2 cursor-pointer bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed"
+            className="w-full py-2.5 text-white font-medium text-xs mt-2 cursor-pointer bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed"
           >
             Complete Order & Generate Bill
           </button>

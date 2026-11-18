@@ -58,7 +58,7 @@ const StoreMember = () => {
             </div>
 
             <div className="p-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="font-bold text-sm text-slate-900">${shirt.price.toFixed(2)}</span>
+              <span className="font-bold text-sm text-slate-900">${Number(shirt.price).toFixed(2)}</span>
               <button onClick={() => handleAddToCart(shirt)} className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flat-btn cursor-pointer">
                 Add to Cart
               </button>

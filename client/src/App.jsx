@@ -11,7 +11,7 @@
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { fetchAll } from './features/FitnessSlice';
+import { fetchData } from './features/FitnessSlice';
 
 // Shared layout parts
 import Header from './components/Header';
@@ -90,7 +90,7 @@ const App = () => {
   // --- Effects ---
   // Load the database data every time a user signs in
   useEffect(() => {
-    if (user) dispatch(fetchAll(user));
+    if (user) dispatch(fetchData(user));
   }, [dispatch, user]);
 
   // --- Pick the routes for the current visitor ---

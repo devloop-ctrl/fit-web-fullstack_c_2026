@@ -1,6 +1,7 @@
 // ============================================================
-// FitnessSlice: data loaded from the database + toast messages
-// (workouts, t-shirts, records, and for admin: users and bills)
+// FitnessSlice: data from the database (CRUD) + toast messages
+// CRUD = Create (addItem), Read (fetchData), Update (updateItem), Delete (deleteItem)
+// "type" is the collection name: users | workouts | tshirts | records
 // ============================================================
 
 // ------------------------------------------------------------
@@ -11,113 +12,133 @@ import axios from 'axios';
 import { logout } from './UserSlice';
 
 // ------------------------------------------------------------
-// 2. Constants and small helpers
+// 2. Helper
 // ------------------------------------------------------------
 
-// Get a readable error message from a failed request
-const getErrorMessage = (err) => err.response?.data?.message || err.message;
-
-// Send a GET request and return only the data
-const getData = (url, params) => axios.get(url, { params }).then((res) => res.data);
-
-// The state before anything is loaded
-const initialState = {
-  workoutCategory: 'all',
-  users: [],
-  bills: [],
-  workouts: [],
-  tshirts: [],
-  records: [],
-  toasts: []
-};
+// Get the message the server sent, or the normal error message
+const getMessage = (err) => err.response?.data?.message || err.message;
 
 // ------------------------------------------------------------
 // 3. Async thunks (talk to the server)
 // ------------------------------------------------------------
 
-// Load everything the signed-in user is allowed to see
-// (admins also get users, bills, and ALL records)
-export const fetchAll = createAsyncThunk('fitness/fetchAll', async (user) => {
-  const isAdmin = user.role === 'Admin';
-
-  const [workouts, tshirts, records, users, bills] = await Promise.all([
-    getData('/api/workouts'),
-    getData('/api/tshirts'),
-    getData('/api/records', isAdmin ? { isAdmin: true } : { userId: user.id }),
-    isAdmin ? getData('/api/users') : [],
-    isAdmin ? getData('/api/bills') : []
-  ]);
-
-  return { workouts, tshirts, records, users, bills };
-});
-
-// Create (no id) or update (with id) an item: users | workouts | tshirts | records
-export const saveItem = createAsyncThunk('fitness/saveItem', async ({ type, id, data }, { rejectWithValue }) => {
+// READ: load all the data the signed-in user needs
+export const fetchData = createAsyncThunk('fitness/fetchData', async (user, { rejectWithValue }) => {
   try {
-    const res = id ? await axios.put(`/api/${type}/${id}`, data) : await axios.post(`/api/${type}`, data);
-    return { type, id, item: res.data };
+    const data = { workouts: [], tshirts: [], records: [], users: [], bills: [] };
+
+    // Everyone gets workouts and t-shirts
+    data.workouts = (await axios.get('/api/workouts')).data;
+    data.tshirts = (await axios.get('/api/tshirts')).data;
+
+    if (user.role === 'Admin') {
+      // Admin gets everything
+      data.records = (await axios.get('/api/records')).data;
+      data.users = (await axios.get('/api/users')).data;
+      data.bills = (await axios.get('/api/bills')).data;
+    } else {
+      // Member gets only his own records
+      data.records = (await axios.get(`/api/records?userId=${user.id}`)).data;
+    }
+
+    return data;
   } catch (err) {
-    return rejectWithValue(getErrorMessage(err));
+    return rejectWithValue(getMessage(err));
   }
 });
 
-// Delete an item from the database
+// CREATE
+export const addItem = createAsyncThunk('fitness/addItem', async ({ type, data }, { rejectWithValue }) => {
+  try {
+    const res = await axios.post(`/api/${type}`, data);
+    return { type, item: res.data };
+  } catch (err) {
+    return rejectWithValue(getMessage(err));
+  }
+});
+
+// UPDATE
+export const updateItem = createAsyncThunk('fitness/updateItem', async ({ type, id, data }, { rejectWithValue }) => {
+  try {
+    const res = await axios.put(`/api/${type}/${id}`, data);
+    return { type, item: res.data };
+  } catch (err) {
+    return rejectWithValue(getMessage(err));
+  }
+});
+
+// DELETE
 export const deleteItem = createAsyncThunk('fitness/deleteItem', async ({ type, id }, { rejectWithValue }) => {
   try {
     await axios.delete(`/api/${type}/${id}`);
     return { type, id };
   } catch (err) {
-    return rejectWithValue(getErrorMessage(err));
+    return rejectWithValue(getMessage(err));
   }
 });
 
 // ------------------------------------------------------------
 // 4. Slice (state + reducers)
 // ------------------------------------------------------------
+const initialState = {
+  users: [],
+  bills: [],
+  workouts: [],
+  tshirts: [],
+  records: [],
+  workoutCategory: 'all',
+  toasts: []
+};
+
 const FitnessSlice = createSlice({
   name: 'fitness',
   initialState,
 
-  // Normal (instant) actions
+  // Normal actions
   reducers: {
     setWorkoutCategory: (state, action) => {
       state.workoutCategory = action.payload;
     },
-
     addToast: (state, action) => {
-      state.toasts.push({ id: `${Date.now()}${Math.random()}`, message: action.payload });
+      state.toasts.push({ id: Date.now() + Math.random(), message: action.payload });
     },
-
     removeToast: (state, action) => {
       state.toasts = state.toasts.filter((toast) => toast.id !== action.payload);
     }
   },
 
-  // Actions that come from the async thunks above
+  // Actions from the thunks above
   extraReducers: (builder) => {
     builder
-      // When the user logs out, clear all data
+      // On logout: clear everything
       .addCase(logout, () => initialState)
 
-      // Data loaded successfully: put it all in the state
-      .addCase(fetchAll.fulfilled, (state, action) => ({ ...state, ...action.payload }))
-
-      // Data failed to load: show a message
-      .addCase(fetchAll.rejected, (state, action) => {
-        state.toasts.push({ id: `${Date.now()}`, message: `Could not load data: ${action.error.message}` });
+      // READ done: put the data in the state
+      .addCase(fetchData.fulfilled, (state, action) => {
+        state.workouts = action.payload.workouts;
+        state.tshirts = action.payload.tshirts;
+        state.records = action.payload.records;
+        state.users = action.payload.users;
+        state.bills = action.payload.bills;
+      })
+      .addCase(fetchData.rejected, (state, action) => {
+        state.toasts.push({ id: Date.now(), message: `Could not load data: ${action.payload}` });
       })
 
-      // Item saved: replace it in the list (edit) or add it to the top (new)
-      .addCase(saveItem.fulfilled, (state, action) => {
-        const { type, id, item } = action.payload;
-        if (id) {
-          state[type] = state[type].map((x) => (x.id === id ? item : x));
-        } else {
-          state[type].unshift(item);
-        }
+      // CREATE done: add the new item at the top of the list
+      .addCase(addItem.fulfilled, (state, action) => {
+        const { type, item } = action.payload;
+        state[type].unshift(item);
       })
 
-      // Item deleted: remove it from the list
+      // UPDATE done: replace the old item with the new one
+      .addCase(updateItem.fulfilled, (state, action) => {
+        const { type, item } = action.payload;
+        const index = state[type].findIndex((x) => x.id === item?.id);
+        if (index !== -1) state[type][index] = item;
+      })
+
+      // DELETE done: remove the item from the list
       .addCase(deleteItem.fulfilled, (state, action) => {
         const { type, id } = action.payload;
         state[type] = state[type].filter((x) => x.id !== id);

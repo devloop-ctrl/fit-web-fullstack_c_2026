@@ -82,7 +82,7 @@ const Header = () => {
           </Link>
 
           {/* ---------------- Admin links ---------------- */}
-          <nav className="hidden lg:flex items-center space-x-1">
+          <nav className="flex items-center space-x-1 overflow-x-auto">
             {ADMIN_LINKS.map(([to, label, icon]) => (
               <NavLink
                 key={to}

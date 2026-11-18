@@ -1,5 +1,5 @@
 // ============================================================
-// UserSlice: everything about the signed-in user (login, register, logout)
+// UserSlice: the signed-in user (login, register, reset password, logout)
 // ============================================================
 
 // ------------------------------------------------------------
@@ -9,107 +9,88 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
 // ------------------------------------------------------------
-// 2. Constants and small helpers
+// 2. Async thunks (talk to the server)
 // ------------------------------------------------------------
 
-// The key used to remember the user in the browser after refresh
-const STORAGE_KEY = 'fp_current_session_user';
+// Get the message the server sent, or the normal error message
+const getMessage = (err) => err.response?.data?.message || err.message;
 
-// Get a readable error message from a failed request
-const getErrorMessage = (err) => err.response?.data?.message || err.message;
-
-// ------------------------------------------------------------
-// 3. Async thunks (talk to the server)
-// ------------------------------------------------------------
-
-// Login: send username + password, the server checks the database
+// Login
 export const login = createAsyncThunk('user/login', async (credentials, { rejectWithValue }) => {
   try {
-    const { data } = await axios.post('/api/auth/login', credentials);
-    return data.user;
+    const res = await axios.post('/api/auth/login', credentials);
+    return res.data.user;
   } catch (err) {
-    return rejectWithValue(getErrorMessage(err));
+    return rejectWithValue(getMessage(err));
   }
 });
 
-// Register: create a new member account in the database
+// Register
 export const register = createAsyncThunk('user/register', async (userData, { rejectWithValue }) => {
   try {
-    const { data } = await axios.post('/api/auth/register', userData);
-    return data.user;
+    const res = await axios.post('/api/auth/register', userData);
+    return res.data.user;
   } catch (err) {
-    return rejectWithValue(getErrorMessage(err));
+    return rejectWithValue(getMessage(err));
   }
 });
 
-// Reset password: ask the server to send recovery instructions
+// Reset password
 export const resetPassword = createAsyncThunk('user/resetPassword', async (email, { rejectWithValue }) => {
   try {
-    const { data } = await axios.post('/api/auth/reset-password', { email });
-    return data.message;
+    const res = await axios.post('/api/auth/reset-password', { email });
+    return res.data.message;
   } catch (err) {
-    return rejectWithValue(getErrorMessage(err));
+    return rejectWithValue(getMessage(err));
   }
 });
 
 // ------------------------------------------------------------
-// 4. Reducer helpers (shared by login and register)
+// 3. Slice (state + reducers)
 // ------------------------------------------------------------
 
-// While the request is running
-const onPending = (state) => {
-  state.isLoading = true;
-};
-
-// When the request ends without signing in (failed, or nothing to save)
-const onStopLoading = (state) => {
-  state.isLoading = false;
-};
-
-// When login or register succeeds: save the user in state and in the browser
-const onSignedIn = (state, action) => {
+// Save the user in the browser so he stays signed in after refresh
+const saveUser = (state, action) => {
   state.isLoading = false;
   state.user = action.payload;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(action.payload));
+  localStorage.setItem('fp_current_session_user', JSON.stringify(action.payload));
 };
 
-// ------------------------------------------------------------
-// 5. Slice (state + reducers)
-// ------------------------------------------------------------
 const UserSlice = createSlice({
   name: 'user',
-
-  // Start with the user saved in the browser (or null)
   initialState: {
-    user: JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'),
+    user: JSON.parse(localStorage.getItem('fp_current_session_user') || 'null'),
     isLoading: false
   },
 
-  // Normal (instant) actions
   reducers: {
     logout: (state) => {
       state.user = null;
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('fp_current_session_user');
     }
   },
 
-  // Actions that come from the async thunks above
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending, onPending)
-      .addCase(login.fulfilled, onSignedIn)
-      .addCase(login.rejected, onStopLoading)
-      .addCase(register.pending, onPending)
-      .addCase(register.fulfilled, onSignedIn)
-      .addCase(register.rejected, onStopLoading)
-      .addCase(resetPassword.pending, onPending)
-      .addCase(resetPassword.fulfilled, onStopLoading) // just stop the loading spinner
-      .addCase(resetPassword.rejected, onStopLoading);
+      // Login
+      .addCase(login.pending, (state) => { state.isLoading = true; })
+      .addCase(login.fulfilled, saveUser)
+      .addCase(login.rejected, (state) => { state.isLoading = false; })
+
+      // Register
+      .addCase(register.pending, (state) => { state.isLoading = true; })
+      .addCase(register.fulfilled, saveUser)
+      .addCase(register.rejected, (state) => { state.isLoading = false; })
+
+      // Reset password
+      .addCase(resetPassword.pending, (state) => { state.isLoading = true; })
+      .addCase(resetPassword.fulfilled, (state) => { state.isLoading = false; })
+      .addCase(resetPassword.rejected, (state) => { state.isLoading = false; });
   }
 });
 
 // ------------------------------------------------------------
-// 6. Exports
+// 4. Exports
 // ------------------------------------------------------------
 export const { logout } = UserSlice.actions;
 export default UserSlice.reducer;
