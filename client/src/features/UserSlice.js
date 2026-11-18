@@ -1,112 +1,67 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { apiLogin, apiRegister } from '../services/api';
+import axios from 'axios';
 
-const savedUser = (() => {
-  try {
-    const raw = localStorage.getItem('fp_current_session_user');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-})();
+const STORAGE_KEY = 'fp_current_session_user';
+const errorMessage = (err) => err.response?.data?.message || err.message;
 
+// POST credentials -> server verifies against the database -> returns the public user profile
 export const login = createAsyncThunk('user/login', async (credentials, { rejectWithValue }) => {
   try {
-    const data = await apiLogin(credentials);
-    if (data.success && data.user) {
-      localStorage.setItem('fp_current_session_user', JSON.stringify(data.user));
-      return data;
-    }
-    return rejectWithValue(data.message || 'Invalid Credentials');
-  } catch (error) {
-    return rejectWithValue(error.response?.data?.message || error.message || 'Login failed');
+    const { data } = await axios.post('/api/auth/login', credentials);
+    return data.user;
+  } catch (err) {
+    return rejectWithValue(errorMessage(err));
   }
 });
 
 export const register = createAsyncThunk('user/register', async (userData, { rejectWithValue }) => {
   try {
-    const data = await apiRegister(userData);
-    if (data.success && data.user) {
-      localStorage.setItem('fp_current_session_user', JSON.stringify(data.user));
-      return data;
-    }
-    return rejectWithValue(data.message || 'Registration failed');
-  } catch (error) {
-    return rejectWithValue(error.response?.data?.message || error.message || 'Registration failed');
+    const { data } = await axios.post('/api/auth/register', userData);
+    return data.user;
+  } catch (err) {
+    return rejectWithValue(errorMessage(err));
   }
 });
 
-const initialState = {
-  user: savedUser,
-  isLoading: false,
-  isSuccess: false,
-  isError: false,
-  message: ''
+export const resetPassword = createAsyncThunk('user/resetPassword', async (email, { rejectWithValue }) => {
+  try {
+    const { data } = await axios.post('/api/auth/reset-password', { email });
+    return data.message;
+  } catch (err) {
+    return rejectWithValue(errorMessage(err));
+  }
+});
+
+const pending = (state) => { state.isLoading = true; };
+const failed = (state) => { state.isLoading = false; };
+const signIn = (state, action) => {
+  state.isLoading = false;
+  state.user = action.payload;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(action.payload));
 };
 
-export const UserSlice = createSlice({
+const UserSlice = createSlice({
   name: 'user',
-  initialState,
+  initialState: {
+    user: JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'),
+    isLoading: false
+  },
   reducers: {
-    setUser: (state, action) => {
-      state.user = action.payload;
-      if (action.payload) {
-        localStorage.setItem('fp_current_session_user', JSON.stringify(action.payload));
-      } else {
-        localStorage.removeItem('fp_current_session_user');
-      }
-    },
     logout: (state) => {
       state.user = null;
-      state.isLoading = false;
-      state.isSuccess = false;
-      state.isError = false;
-      state.message = '';
-      localStorage.removeItem('fp_current_session_user');
-    },
-    resetStatus: (state) => {
-      state.isLoading = false;
-      state.isSuccess = false;
-      state.isError = false;
-      state.message = '';
+      localStorage.removeItem(STORAGE_KEY);
     }
   },
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending, (state) => {
-        state.isLoading = true;
-        state.isError = false;
-        state.message = '';
-      })
-      .addCase(login.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.user = action.payload.user;
-        state.message = action.payload.message || 'Login successful';
-        state.isSuccess = true;
-      })
-      .addCase(login.rejected, (state, action) => {
-        state.isLoading = false;
-        state.isError = true;
-        state.message = action.payload || 'Login failed';
-      })
-      .addCase(register.pending, (state) => {
-        state.isLoading = true;
-        state.isError = false;
-        state.message = '';
-      })
-      .addCase(register.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.user = action.payload.user;
-        state.message = action.payload.message || 'Registered successfully';
-        state.isSuccess = true;
-      })
-      .addCase(register.rejected, (state, action) => {
-        state.isLoading = false;
-        state.isError = true;
-        state.message = action.payload || 'Registration failed';
-      });
+      .addCase(login.pending, pending)
+      .addCase(login.fulfilled, signIn)
+      .addCase(login.rejected, failed)
+      .addCase(register.pending, pending)
+      .addCase(register.fulfilled, signIn)
+      .addCase(register.rejected, failed);
   }
 });
 
-export const { setUser, logout, resetStatus } = UserSlice.actions;
+export const { logout } = UserSlice.actions;
 export default UserSlice.reducer;

@@ -1,14 +1,8 @@
-import { configureStore } from "@reduxjs/toolkit";
-import UserSlice from "./features/UserSlice";
-import CartSlice from "./features/CartSlice";
-import FitnessSlice from "./features/FitnessSlice";
+import { configureStore } from '@reduxjs/toolkit';
+import user from './features/UserSlice';
+import cart from './features/CartSlice';
+import fitness from './features/FitnessSlice';
 
 export const store = configureStore({
-  reducer: {
-    user: UserSlice,
-    cart: CartSlice,
-    fitness: FitnessSlice
-  }
+  reducer: { user, cart, fitness }
 });
-
-export default store;

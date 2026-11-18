@@ -595,7 +595,7 @@
     const INITIAL_USERS = [
       { id: 'U-101', username: 'alexsmith', name: 'Alex Smith', email: 'alex@fitpulse.io', phone: '+1 415 555 2671', role: 'Member', password: 'password123' },
       { id: 'U-102', username: 'sarajones', name: 'Sara Jones', email: 'sara@fitpulse.io', phone: '+1 415 555 8923', role: 'Trainer', password: 'password123' },
-      { id: 'U-103', username: 'admin', name: 'System Admin', email: 'admin@fitpulse.io', phone: '+1 415 555 0000', role: 'Admin', password: 'admin' }
+      { id: 'U-103', username: 'admin', name: 'System Admin', email: 'fitpulse.io', phone: '+1 415 555 0000', role: 'Admin', password: 'admin' }
     ];
 
     const INITIAL_BILLS = [
@@ -661,7 +661,7 @@
       setTimeout(() => toast.remove(), 2500);
     }
 
-    /* AUTHENTICATION: LOGIN, REGISTER, RESET PASSWORD */
+    /* AUTHENTICATION: LOGINadmin@, REGISTER, RESET PASSWORD */
     function openAuthModal(view = 'login') {
       document.getElementById('authModal').classList.remove('hidden');
       switchAuthView(view);
