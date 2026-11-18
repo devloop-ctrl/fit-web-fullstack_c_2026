@@ -1,3 +1,11 @@
+// ============================================================
+// seedData: starter data inserted ONCE when a collection is empty.
+// This is database data (not UI data). Passwords are hashed before saving.
+// ============================================================
+
+// ------------------------------------------------------------
+// 1. Imports
+// ------------------------------------------------------------
 import bcrypt from 'bcrypt';
 import User from './models/User.js';
 import Bill from './models/Bill.js';
@@ -5,6 +13,9 @@ import Workout from './models/Workout.js';
 import Tshirt from './models/Tshirt.js';
 import Record from './models/Record.js';
 
+// ------------------------------------------------------------
+// 2. Starter data
+// ------------------------------------------------------------
 export const INITIAL_USERS = [
   { id: 'U-101', username: 'alexsmith', name: 'Alex Smith', email: 'alex@fitpulse.io', phone: '+1 415 555 2671', role: 'Member', password: 'password123' },
   { id: 'U-102', username: 'sarajones', name: 'Sara Jones', email: 'sara@fitpulse.io', phone: '+1 415 555 8923', role: 'Trainer', password: 'password123' },
@@ -37,45 +48,30 @@ export const INITIAL_RECORDS = [
   { id: 'R-2', userId: 'U-102', userEmail: 'sara@fitpulse.io', name: 'Sara Jones', height: 165, weight: 58, bmi: 21.3, calories: 1950, steps: 8500, date: '2026-03-31' }
 ];
 
+// ------------------------------------------------------------
+// 3. Seed function (runs after the database connects)
+// ------------------------------------------------------------
+
+// Insert the starter items into a model only if it is empty
+const seedIfEmpty = async (Model, items, label) => {
+  if ((await Model.countDocuments()) > 0) return;
+  console.log(`Seeding initial ${label}...`);
+  await Model.insertMany(items);
+};
+
 export async function seedDatabase() {
   try {
-    const userCount = await User.countDocuments();
-    if (userCount === 0) {
-      console.log('Seeding initial users...');
-      for (const u of INITIAL_USERS) {
-        const hashedPassword = await bcrypt.hash(u.password, 10);
-        await User.create({ ...u, password: hashedPassword });
-      }
-    }
+    // Users: hash each password first
+    const hashedUsers = await Promise.all(
+      INITIAL_USERS.map(async (u) => ({ ...u, password: await bcrypt.hash(u.password, 10) }))
+    );
 
-    const billCount = await Bill.countDocuments();
-    if (billCount === 0) {
-      console.log('Seeding initial bills...');
-      await Bill.insertMany(INITIAL_BILLS);
-    }
-
-    const workoutCount = await Workout.countDocuments();
-    if (workoutCount === 0) {
-      console.log('Seeding initial workouts...');
-      await Workout.insertMany(INITIAL_WORKOUTS);
-    }
-
-    const tshirtCount = await Tshirt.countDocuments();
-    if (tshirtCount === 0) {
-      console.log('Seeding initial t-shirts...');
-      await Tshirt.insertMany(INITIAL_TSHIRTS);
-    }
-
-    const recordCount = await Record.countDocuments();
-    if (recordCount === 0) {
-      console.log('Seeding initial records...');
-      await Record.insertMany(INITIAL_RECORDS);
-    } else {
-      // Migrate any existing unassociated records
-      await Record.updateMany({ userId: { $exists: false } }, { $set: { userId: 'U-101', userEmail: 'alex@fitpulse.io' } });
-    }
+    await seedIfEmpty(User, hashedUsers, 'users');
+    await seedIfEmpty(Bill, INITIAL_BILLS, 'bills');
+    await seedIfEmpty(Workout, INITIAL_WORKOUTS, 'workouts');
+    await seedIfEmpty(Tshirt, INITIAL_TSHIRTS, 't-shirts');
+    await seedIfEmpty(Record, INITIAL_RECORDS, 'records');
   } catch (error) {
-    console.error('Error seeding database:', error);
+    console.error('Error seeding database:', error.message);
   }
 }
-

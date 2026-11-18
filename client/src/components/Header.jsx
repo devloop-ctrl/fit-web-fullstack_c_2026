@@ -1,9 +1,22 @@
+// ============================================================
+// Header: the top bar. It changes depending on who is signed in
+//   Admin  -> admin links
+//   Member -> member links + cart button
+//   Guest  -> sign in / register buttons
+// ============================================================
+
+// ------------------------------------------------------------
+// 1. Imports
+// ------------------------------------------------------------
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { addToast } from '../features/FitnessSlice';
 import { toggleCartDrawer } from '../features/CartSlice';
 import { logout } from '../features/UserSlice';
 
+// ------------------------------------------------------------
+// 2. Constants: navigation links [url, label, icon]
+// ------------------------------------------------------------
 const ADMIN_LINKS = [
   ['/admin', 'Dashboard', 'fa-gauge'],
   ['/admin/bills', 'Invoices', 'fa-file-invoice-dollar'],
@@ -19,6 +32,9 @@ const MEMBER_LINKS = [
   ['/workouts', 'Workouts', 'fa-dumbbell']
 ];
 
+// ------------------------------------------------------------
+// 3. Small part: the logo (used by member and guest headers)
+// ------------------------------------------------------------
 const Logo = ({ subtitle, to }) => (
   <Link to={to} className="flex items-center space-x-2 select-none">
     <div className="w-8 h-8 bg-slate-900 text-white flex items-center justify-center rounded">
@@ -31,22 +47,31 @@ const Logo = ({ subtitle, to }) => (
   </Link>
 );
 
+// ------------------------------------------------------------
+// 4. Header component
+// ------------------------------------------------------------
 const Header = () => {
+  // --- Data from Redux ---
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
-  const cartCount = useSelector((state) => state.cart.items.reduce((sum, i) => sum + i.qty, 0));
+  const cartCount = useSelector((state) => state.cart.items.reduce((sum, item) => sum + item.qty, 0));
 
+  // --- Functions ---
+
+  // Sign out and go back to the home page
   const handleLogout = () => {
     dispatch(logout());
     dispatch(addToast('You have signed out.'));
     navigate('/');
   };
 
+  // --- Render: ADMIN header ---
   if (user?.role === 'Admin') {
     return (
       <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          {/* ---------------- Logo ---------------- */}
           <Link to="/admin" className="flex items-center space-x-2.5 select-none">
             <div className="w-8 h-8 bg-amber-500 text-black flex items-center justify-center rounded">
               <i className="fa-solid fa-shield-halved text-sm"></i>
@@ -56,6 +81,7 @@ const Header = () => {
             </div>
           </Link>
 
+          {/* ---------------- Admin links ---------------- */}
           <nav className="hidden lg:flex items-center space-x-1">
             {ADMIN_LINKS.map(([to, label, icon]) => (
               <NavLink
@@ -73,6 +99,7 @@ const Header = () => {
             ))}
           </nav>
 
+          {/* ---------------- User name + sign out ---------------- */}
           <div className="flex items-center space-x-2">
             <span className="border border-amber-600/40 text-amber-300 text-xs px-2.5 py-1 rounded-md font-semibold">
               {user.name || user.username}
@@ -87,12 +114,15 @@ const Header = () => {
     );
   }
 
+  // --- Render: MEMBER header ---
   if (user) {
     return (
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          {/* ---------------- Logo ---------------- */}
           <Logo subtitle="Member Dashboard" to="/calculators" />
 
+          {/* ---------------- Member links ---------------- */}
           <nav className="flex items-center space-x-1">
             {MEMBER_LINKS.map(([to, label, icon]) => (
               <NavLink
@@ -109,6 +139,7 @@ const Header = () => {
             ))}
           </nav>
 
+          {/* ---------------- Cart + user name + sign out ---------------- */}
           <div className="flex items-center space-x-2">
             <button onClick={() => dispatch(toggleCartDrawer(true))} className="px-3 py-1.5 flat-box hover:bg-slate-50 text-xs sm:text-sm font-medium flex items-center space-x-2 cursor-pointer">
               <i className="fa-solid fa-cart-shopping text-xs"></i>
@@ -127,10 +158,14 @@ const Header = () => {
     );
   }
 
+  // --- Render: GUEST header ---
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+        {/* ---------------- Logo ---------------- */}
         <Logo subtitle="Health & Fitness Platform" to="/" />
+
+        {/* ---------------- Sign in / Register ---------------- */}
         <div className="flex items-center space-x-2">
           <Link to="/login" className="px-3.5 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-semibold flat-btn">
             <i className="fa-solid fa-right-to-bracket mr-1.5"></i>Sign In

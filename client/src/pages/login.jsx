@@ -1,45 +1,70 @@
+// ============================================================
+// Route: /login
+// Login page. Steps: type details -> send to server -> go to the right dashboard
+// ============================================================
+
+// ------------------------------------------------------------
+// 1. Imports
+// ------------------------------------------------------------
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../features/UserSlice';
 import { addToast } from '../features/FitnessSlice';
 
+// ------------------------------------------------------------
+// 2. Login component
+// ------------------------------------------------------------
 const Login = () => {
+  // --- Data from Redux ---
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isLoading = useSelector((state) => state.user.isLoading);
 
+  // --- Form state ---
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // Step 1: Submit credentials -> Step 2: Verify via Redux thunk -> Step 3: Route by role
+  // --- Functions ---
+
+  // Runs when the form is submitted
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
     try {
+      // Step 1: send the details to the server (checked against the database)
       const user = await dispatch(login({ username: username.trim(), password })).unwrap();
+
+      // Step 2: welcome the user
       dispatch(addToast(`Welcome back, ${user.name || user.username}!`));
+
+      // Step 3: go to the correct dashboard
       navigate(user.role === 'Admin' ? '/admin' : '/calculators', { replace: true });
-    } catch (msg) {
-      setError(msg || 'Invalid credentials');
+    } catch (message) {
+      setError(message || 'Invalid credentials');
     }
   };
 
+  // --- Render ---
   return (
     <div className="max-w-sm mx-auto my-8 flat-box overflow-hidden">
+      {/* ---------------- Title ---------------- */}
       <div className="p-4 border-b border-slate-200 bg-slate-50">
         <h1 className="font-bold text-sm text-slate-900">Account Login</h1>
         <p className="text-[11px] text-slate-500">Enter username or email and password to log in</p>
       </div>
 
       <form onSubmit={handleSubmit} className="p-5 space-y-3">
+        {/* ---------------- Error message ---------------- */}
         {error && (
           <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded">
             <i className="fa-solid fa-circle-exclamation text-red-500 mr-2"></i>{error}
           </div>
         )}
 
+        {/* ---------------- Username ---------------- */}
         <div>
           <label className="block text-xs font-medium text-slate-700 mb-1">Username or Email</label>
           <input
@@ -51,6 +76,7 @@ const Login = () => {
           />
         </div>
 
+        {/* ---------------- Password ---------------- */}
         <div>
           <label className="block text-xs font-medium text-slate-700 mb-1">Password</label>
           <input
@@ -62,12 +88,11 @@ const Login = () => {
           />
         </div>
 
-        <div>
-          <Link to="/reset-password" className="text-[11px] text-slate-500 hover:text-slate-900">
-            Forgot password?
-          </Link>
-        </div>
+        <Link to="/reset-password" className="block text-[11px] text-slate-500 hover:text-slate-900">
+          Forgot password?
+        </Link>
 
+        {/* ---------------- Submit ---------------- */}
         <button
           type="submit"
           disabled={isLoading}
@@ -76,6 +101,7 @@ const Login = () => {
           {isLoading ? 'Authenticating...' : 'Log In'}
         </button>
 
+        {/* ---------------- Link to register ---------------- */}
         <div className="text-center pt-2 text-xs text-slate-600 border-t border-slate-100">
           Don&apos;t have an account?
           <Link to="/register" className="text-slate-900 font-semibold underline ml-1">Register</Link>
@@ -86,4 +112,3 @@ const Login = () => {
 };
 
 export default Login;
-
